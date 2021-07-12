@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+
+<!-- Webpack and npm have both been setup, so you can just run 'npm install'
+and 'webpack --watch' if you ever clone this repo -->
+
+<html>
+<head>
+  <meta charset="utf-8">
+	<title>sequencer</title>
+
+	<link rel="stylesheet" type="text/css" href="styles/main.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+
+    <link rel="shortcut icon" href="assets/icon.ico" type="image/x-icon">
+</head>
+<body>
+    
+    <div class="split left">
+        <button id="playButton">&#9658;</button><input id="bpm" value="60"> 
+        <button id="recordButton">*</button><a id="downloadLink"></a>
+        <div id="stageFilters"></div>
+        <div id="stageSorters"></div>
+        <input id="interval" value="4n">
+        <div id="stage" class="stage"></div>
+        <div id="stage-2" class="stage"></div>
+    </div>
+
+    <div class="split right">
+        <button id="sendButton">&#9986;</button>
+        <select id="transcriptChooser"></select>
+        <button id="selectAllButton">select all</button>
+        <div id="transcriptFilters"></div>
+        <div id="transcriptSorters"></div>
+        <div id="transcript"></div>
+    </div> 
+
+    <!--<button onclick="playSample('james')">play sample 2</button>-->
+    <!--<button onclick="addSample()">setup!</button>-->
+    
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="scripts/sequencer.js"></script>
+    <script src="scripts/transcript.js"></script>
+    <script src="scripts/filters.js"></script>
+    <script type="text/javascript" src="scripts/main.js"></script>
+
+</body>
+</html>
