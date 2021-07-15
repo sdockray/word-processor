@@ -1,15 +1,5 @@
-
-function fire() {
-    console.log("button fired!")  
-    for (let i=0; i<units.length; i++) {
-        units[i].sequencer.looping = true
-        units[i].sequencer.play() 
-    }
-    transcriptInterface.getCurrentSequence()
-}
-
-
-let units = []
+let stages = []
+const spirit = new MultiSequencer()
 const orgId = 'bdee032746'
 
 async function loadTranscriptList() {
@@ -20,6 +10,33 @@ async function loadTranscriptList() {
         })
         return transcriptData
     })
+}
+
+function buildStage($parent) {
+    $stageContainer = $('<div>').addClass('stage')
+    const $stage = $('<div>').addClass('words')
+    const stage = new TranscriptInterface($stage)
+    spirit.addSequencer(stage.sequencer)
+    stages.push(stage)
+    $('#stageChooser').append($('<option></option>').attr('value', stages.length - 1).text(stages.length))
+    const $filters = $('<div>')
+    const $sorters = $('<div>')
+    const $interval = $('<input>').val("4n")
+    const $offset = $('<input>').val("0")
+    $interval.on('keypress', function (e) {
+        if(e.which === 13){
+            //Disable textbox to prevent multiple submit
+            $(this).attr("disabled", "disabled")
+            // stage.sequencer.updateBPM(parseInt($('#bpm').val()))
+            stage.sequencer.setInterval($interval.val(), $offset.val())
+            //Enable the textbox again if needed.
+            $(this).removeAttr("disabled")
+        }
+    })
+    const stageFilters = new FilterInterface($filters, stage)
+    const stageSorters = new SorterInterface($sorters, stage)
+    $stageContainer.append($filters).append($sorters).append($stage).append($interval).append($offset)
+    $parent.append($stageContainer)
 }
 
 async function start() {
@@ -57,7 +74,9 @@ async function start() {
         })
         //
         $('#sendButton').show()
+        $('#stageChooser').show()
         $('#sendButton').on('click', () => {
+            const stage = stages[parseInt($('#stageChooser').val())]
             $.each(transcriptInterface.$transcript.find('.w.selected:visible'), function(index, item) {
                 // $(item).clone().appendTo($('#stage')).removeClass('selected')
                 stage.addRenderedWord($(item).clone(true).off())
@@ -71,14 +90,23 @@ async function start() {
     // set up buttons
     $('#selectAllButton').hide()
     $('#sendButton').hide()
+    $('#stageChooser').hide()
     // set up stage
-    const stage = new TranscriptInterface($('#stage'))
-    const stageFilters = new FilterInterface($('#stageFilters'), stage)
-    const stageSorters = new SorterInterface($('#stageSorters'), stage)
+    // const stage = new TranscriptInterface($('#stage'))
+    // const stageFilters = new FilterInterface($('#stageFilters'), stage)
+    // const stageSorters = new SorterInterface($('#stageSorters'), stage)
+    buildStage($('#stages'))
+    //buildStage($('#stages'))
+    //buildStage($('#stages'))
     $('#interval').hide()
     $('#playButton').on('click', () => {
-        stage.getCurrentSequence()
-        stage.sequencer.playOnBeat(parseInt($('#bpm').val()), $('#interval').val())
+        // stage.getCurrentSequence()
+        // stage.sequencer.playOnBeat(parseInt($('#bpm').val()), $('#interval').val())
+        spirit.updateBPM(parseInt($('#bpm').val()))
+        $.each(stages, function (key, stage) {
+            stage.getCurrentSequence()
+        })
+        spirit.playOnBeat()
     })
     $('#recordButton').on('click', () => {
         stage.getCurrentSequence()
@@ -86,9 +114,22 @@ async function start() {
     })
     $('#bpm').on('keypress', function (e) {
         if(e.which === 13){
+            const bpm = parseInt($('#bpm').val())
             //Disable textbox to prevent multiple submit
             $(this).attr("disabled", "disabled")
-            stage.sequencer.updateBPM(parseInt($('#bpm').val()))
+            // stage.sequencer.updateBPM(parseInt($('#bpm').val()))
+            spirit.updateBPM(bpm)
+            if (bpm===0 || (bpm > 60) && (bpm < 100)) {
+                //$('.stage .w').css('display', 'inline')
+                $('.stage .w').css('margin-right', '5px')
+            } else if (bpm > 60 ) {
+                //$('.stage .w').css('display', 'inline')
+                $('.stage .w').css('margin-right', -5 * (bpm / 60)  +'px')
+            } else {
+                //$('.stage .w').css('display', 'block')
+                //$('.stage .w').css('margin-top', 20 * 60 / bpm  +'px')
+                $('.stage .w').css('margin-right', 20 * 60 / bpm  +'px')
+            }
             //Enable the textbox again if needed.
             $(this).removeAttr("disabled")
         }

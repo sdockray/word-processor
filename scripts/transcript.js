@@ -127,10 +127,16 @@ class TranscriptInterface {
     filter(filterFunc) {
         const visibleWords = this.$transcript.find('.w:visible')
         const speed = Math.round(2000/visibleWords.length)+2
+        // const speed = 2
+        const that = this
         $.each(visibleWords, function (index, item) {
             if (!filterFunc($(item))) {
                 setTimeout(() => {
                     $(item).fadeOut("slow")
+                }, index*speed)
+            } else {
+                setTimeout(() => {
+                    that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
                 }, index*speed)
             }
         })
@@ -154,7 +160,9 @@ class TranscriptInterface {
 
     addRenderedWord($w) {
         this.$transcript.append($w).removeClass('selected')
-        this.transcript.loadAudio(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'))
+        this.transcript.loadAudio(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end')).then(sample => {
+            $w.addClass('loaded')
+        })
     }
 
     renderWords(wdlist, segment, $parent) {

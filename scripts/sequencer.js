@@ -44,9 +44,9 @@ class Sample {
     }
     this.player.volume.value = 20
     if (this.start>=0 && this.duration>=0) {
-      this.player.start('+0.05', this.start + .05, this.duration)
+      this.player.start("0.05", this.start + .05, this.duration)
     } else {
-      this.player.start('+0.05')
+      this.player.start("0.05")
     }
   }
 
@@ -170,6 +170,8 @@ class Sequencer {
     this.sampler = new Sampler()
     this.sequence = []
     this.sequenceIdx = 0
+    this.interval = "4n"
+    this.offset = 0
     this.looping = false
     this.sequencing = false
     this.transportOffsetTime = 0
@@ -276,6 +278,27 @@ class Sequencer {
     */
   }
 
+  startInterval() {
+    // If bpm is 0 then we're playing words sequentially
+    //if (bpm === 0) {
+    //  return this.play()
+    //}
+    const that = this
+    this.sequenceIdx = 0
+    console.log(`Sequencing at ${Tone.Transport.bpm.value} every ${this.interval}`)
+    Tone.Transport.scheduleRepeat((time) => {
+      setTimeout(() => {
+        that.sampler.play(that.sequence[that.sequenceIdx], () => {}, that.offset)
+        that.sequenceIdx = (that.sequenceIdx + 1) % that.sequence.length
+      }, that.offset)
+    }, this.interval)    
+  }
+
+  setInterval(interval, offset=0) {
+    this.interval = interval
+    this.offset = parseFloat(offset)
+  }
+
   playOnBeat(bpm=180, interval="1i") {
     // If bpm is 0 then we're playing words sequentially
     if (bpm === 0) {
@@ -320,6 +343,38 @@ class Sequencer {
   }
 
   // TODO: bpm sequencing
+}
+
+
+class MultiSequencer {
+  constructor() {
+    this.sequencers = []
+  }
+
+  addSequencer(s) {
+    this.sequencers.push(s)
+  }
+
+  playOnBeat() {
+    if (Tone.Transport.state == "started") {
+      console.log("Pausing sequencer")
+      Tone.Transport.stop()
+      Tone.Transport.cancel()
+      return
+    }
+    for (const s of this.sequencers) {
+      s.startInterval()
+    }
+    // Tone.start()
+    Tone.Transport.start()
+  }
+
+  updateBPM(bpm) {
+    if (Tone.Transport.bpm.value != bpm) {
+      console.log("Setting bpm to:", bpm)
+      Tone.Transport.bpm.value = bpm
+    }
+  }
 }
 
 

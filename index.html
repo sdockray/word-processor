@@ -18,15 +18,11 @@ and 'webpack --watch' if you ever clone this repo -->
     <div class="split left">
         <button id="playButton">&#9658;</button><input id="bpm" value="60"> 
         <button id="recordButton">*</button><a id="downloadLink"></a>
-        <div id="stageFilters"></div>
-        <div id="stageSorters"></div>
-        <input id="interval" value="4n">
-        <div id="stage" class="stage"></div>
-        <div id="stage-2" class="stage"></div>
+        <div id="stages"></div>
     </div>
 
     <div class="split right">
-        <button id="sendButton">&#9986;</button>
+        <select id="stageChooser"></select><button id="sendButton">&#9986;</button>
         <select id="transcriptChooser"></select>
         <button id="selectAllButton">select all</button>
         <div id="transcriptFilters"></div>
