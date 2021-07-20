@@ -8,25 +8,28 @@ and 'webpack --watch' if you ever clone this repo -->
   <meta charset="utf-8">
 	<title>sequencer</title>
 
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+
 	<link rel="stylesheet" type="text/css" href="styles/main.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 
-    <link rel="shortcut icon" href="assets/icon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="ml.gif" type="image/gif">
 </head>
 <body>
     
     <div class="split left">
-        <button id="playButton">&#9658;</button><input id="bpm" value="60"> 
-        <button id="recordButton">*</button><a id="downloadLink"></a>
+        <div id="playControls"><button id="playButton">&#9658;</button><input id="bpm" value="60"></div>
+        <!--<button id="recordButton">*</button><a id="downloadLink"></a>-->
         <div id="stages"></div>
     </div>
 
     <div class="split right">
-        <select id="stageChooser"></select><button id="sendButton">&#9986;</button>
         <select id="transcriptChooser"></select>
-        <button id="selectAllButton">select all</button>
         <div id="transcriptFilters"></div>
         <div id="transcriptSorters"></div>
+        <select id="stageChooser"></select><button id="sendButton">&#9986;</button>
+        <button id="selectAllButton">select all</button>
         <div id="transcript"></div>
     </div> 
 
@@ -35,6 +38,7 @@ and 'webpack --watch' if you ever clone this repo -->
     
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://unpkg.com/compromise"></script>
     <script src="scripts/sequencer.js"></script>
     <script src="scripts/transcript.js"></script>
     <script src="scripts/filters.js"></script>

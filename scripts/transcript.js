@@ -124,21 +124,101 @@ class TranscriptInterface {
         }
     }
 
-    filter(filterFunc) {
+    makePhrase($words) {
+        const end = $words[$words.length - 1].data('end')
+        const allWords = $words.map(x => x.data('word')).join('')
+        const phones = [].concat.apply([], $words.map(x => x.data('phones').map(p => p[0])))
+        $words[0].text(allWords)
+        $words[0].data('word', allWords)
+        $words[0].data('end', end)
+        $words[0].data('phones', phones)
+        for (let i=1; i<$words.length; i++) {
+            $words[i].hide()
+        }
+    }
+
+    // Filter, but a sequence of words must all match
+    filter_sequence(filterFunc, targetLength) {
+        // this.filter(filterFunc, leadingTrailing)
         const visibleWords = this.$transcript.find('.w:visible')
         const speed = Math.round(2000/visibleWords.length)+2
-        // const speed = 2
         const that = this
+        let candidate = []
+        let phrases = []
         $.each(visibleWords, function (index, item) {
-            if (!filterFunc($(item))) {
+            if (filterFunc($(item), candidate.length)) {
+                candidate.push($(item))
+            } else {
+                candidate = []
+            }
+            if (candidate.length == targetLength) {
+                $.each(candidate, function (index, item) {
+                    item.addClass('select')
+                })
+                phrases.push(candidate)
+                candidate = []
+            }
+        })
+        $.each(visibleWords, function (index, item) {
+            if (!$(item).hasClass('select')) {
                 setTimeout(() => {
                     $(item).fadeOut("slow")
                 }, index*speed)
             } else {
                 setTimeout(() => {
-                    that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
+                    $(item).removeClass('select')
+                    $(item).addClass('selected')
+                    //that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
                 }, index*speed)
             }
+        })
+        $.each(phrases, function (index, item) {
+            that.makePhrase(item)
+        })
+    }
+
+    filter(filterFunc, leadingTrailing=[0,0]) {
+        const visibleWords = this.$transcript.find('.w:visible')
+        const speed = Math.round(2000/visibleWords.length)+2
+        // const speed = 2
+        const that = this
+        let phrases = []
+        $.each(visibleWords, function (index, item) {
+            if (filterFunc($(item))) {
+                let words = [$(item)]
+                $(item).addClass('select')
+                let $i = $(item)
+                Array.from(Array(leadingTrailing[0])).map((_) => {
+                    $i = $i.prev()
+                    $i.addClass('select')
+                    words.push($i)
+                })
+                $i = $(item)
+                Array.from(Array(leadingTrailing[1])).map((_) => {
+                    $i = $i.next()
+                    $i.addClass('select')
+                    words.push($i)
+                })
+                if (words.length > 1) {
+                    phrases.push(words.sort((a,b) => a.data('start') > b.data('start')))
+                }
+            }
+        })
+        $.each(visibleWords, function (index, item) {
+            if (!$(item).hasClass('select')) {
+                setTimeout(() => {
+                    $(item).fadeOut("slow")
+                }, index*speed)
+            } else {
+                setTimeout(() => {
+                    $(item).removeClass('select')
+                    $(item).addClass('selected')
+                    //that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
+                }, index*speed)
+            }
+        })
+        $.each(phrases, function (index, item) {
+            that.makePhrase(item)
         })
     }
 
@@ -165,19 +245,27 @@ class TranscriptInterface {
         })
     }
 
-    renderWords(wdlist, segment, $parent) {
-        const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g
+    async renderWords(wdlist, segment, $parent) {
+        const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ]/g
         // this.transcript.loadSegmentAudio(this.sequencer.sampler, segment)
+        const pos = await cheap_nlp(wdlist.map(w => w.word).join(''))
+        let idx = 0
         for (let wd of wdlist) {
             // console.log(wd)
+            const cleanWord = wd.word.replace(regex, '').toLowerCase()
             const $w = $("<span>").addClass('w').text(wd.word).data({
                 start: wd.start,
                 end: wd.end,
-                word: wd.word.replace(regex, ''),
+                word: cleanWord,
                 phones: wd.phones,
                 mediaId: segment.media_id,
-                docId: this.transcript.docId
+                docId: this.transcript.docId,
+                pos: (idx < pos.length && pos[idx].hasOwnProperty(cleanWord)) ? pos[idx][cleanWord] : []
             })
+            const lastLetter = wd.word.charAt(wd.word.length - 2)
+            if (lastLetter=='.' || lastLetter=='?' || lastLetter=='!') {
+                idx += 1
+            }
             //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, wd.start, wd.end)
             //this.transcript.loadLocalAudio(this.sequencer.sampler, wd.start, wd.end, "samples/" + this.transcript.docId)
             $w.on('mousedown', () => {
@@ -198,4 +286,10 @@ class TranscriptInterface {
         }
     }
 
+}
+
+async function cheap_nlp(sentence) {
+    let doc = nlp(sentence)
+    return doc.out('tags')
+    // console.log(doc.nouns().list.map(a => a.text()))
 }

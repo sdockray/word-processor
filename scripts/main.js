@@ -21,8 +21,17 @@ function buildStage($parent) {
     $('#stageChooser').append($('<option></option>').attr('value', stages.length - 1).text(stages.length))
     const $filters = $('<div>')
     const $sorters = $('<div>')
-    const $interval = $('<input>').val("4n")
-    const $offset = $('<input>').val("0")
+    // const $interval = $('<input>').addClass('interval').attr('placeholder', '4n').val("4n")
+    const intervals = ["1n", "2n", "4n", "8n", "16n"]
+    $interval = $('<select>')
+    $.each(intervals, function (key, entry) {
+        $interval.append($('<option></option>').attr('value', entry).text(entry))
+    })
+    $interval.prop('selectedIndex', 2)
+    $interval.change((e) => {
+        stage.sequencer.setInterval(e.target.value, $offset.val())
+    })
+    const $offset = $('<input>').addClass('offset').val("0")
     $interval.on('keypress', function (e) {
         if(e.which === 13){
             //Disable textbox to prevent multiple submit
@@ -37,6 +46,7 @@ function buildStage($parent) {
     const stageSorters = new SorterInterface($sorters, stage)
     $stageContainer.append($filters).append($sorters).append($stage).append($interval).append($offset)
     $parent.append($stageContainer)
+    $stageContainer.hide()
 }
 
 async function start() {
@@ -77,6 +87,7 @@ async function start() {
         $('#stageChooser').show()
         $('#sendButton').on('click', () => {
             const stage = stages[parseInt($('#stageChooser').val())]
+            stage.$parent.parent().show()
             $.each(transcriptInterface.$transcript.find('.w.selected:visible'), function(index, item) {
                 // $(item).clone().appendTo($('#stage')).removeClass('selected')
                 stage.addRenderedWord($(item).clone(true).off())
@@ -92,16 +103,11 @@ async function start() {
     $('#sendButton').hide()
     $('#stageChooser').hide()
     // set up stage
-    // const stage = new TranscriptInterface($('#stage'))
-    // const stageFilters = new FilterInterface($('#stageFilters'), stage)
-    // const stageSorters = new SorterInterface($('#stageSorters'), stage)
     buildStage($('#stages'))
-    //buildStage($('#stages'))
-    //buildStage($('#stages'))
+    buildStage($('#stages'))
+    buildStage($('#stages'))
     $('#interval').hide()
     $('#playButton').on('click', () => {
-        // stage.getCurrentSequence()
-        // stage.sequencer.playOnBeat(parseInt($('#bpm').val()), $('#interval').val())
         spirit.updateBPM(parseInt($('#bpm').val()))
         $.each(stages, function (key, stage) {
             stage.getCurrentSequence()
@@ -117,7 +123,6 @@ async function start() {
             const bpm = parseInt($('#bpm').val())
             //Disable textbox to prevent multiple submit
             $(this).attr("disabled", "disabled")
-            // stage.sequencer.updateBPM(parseInt($('#bpm').val()))
             spirit.updateBPM(bpm)
             if (bpm===0 || (bpm > 60) && (bpm < 100)) {
                 //$('.stage .w').css('display', 'inline')

@@ -10,6 +10,7 @@ class FilterInterface {
         this.$filterList.append($('<option></option>').attr('value', 'word length').text('word length'))
         this.$filterList.append($('<option></option>').attr('value', 'phoneme').text('phoneme'))
         this.$filterList.append($('<option></option>').attr('value', 'word speed').text('word speed'))
+        this.$filterList.append($('<option></option>').attr('value', 'language').text('language'))
         this.$filterList.change((e) => {
             this.handle(e.target.value)
         })
@@ -43,7 +44,10 @@ class FilterInterface {
     }
 
     addFieldOption(title, callback) {
-        let field = $('<input>').val(title)
+        let field = $('<input>').attr('type', 'text').val(title)
+        if (title=="before" || title=="after") {
+            field.addClass('narrow')
+        }
         field.change((e) => {
             callback(e.target.value)
         })
@@ -60,6 +64,8 @@ class FilterInterface {
     handle(mode) {
         let kind = false
         let opt = false
+        let before = 0
+        let after = 0
         if (mode=="word length") {
             this.addSelectOption('what kind?', {'min': 'Minimum word length is', 'max': 'Maximum word length is'}, (val) => {
                 kind = val
@@ -74,7 +80,7 @@ class FilterInterface {
                     } else if (kind=="max") {
                         return word.data('word').length - 1 <= parseInt(opt)
                     }
-                })
+                }, [before, after])
                 this.reset()
             })
         } else if (mode=="phoneme") {
@@ -88,8 +94,12 @@ class FilterInterface {
                 '-ing': { 'phones': 'ih,ng', 'kind': 'end' },
                 '-ly': { 'phones': 'l,iy', 'kind': 'end' },
                 '-ide': { 'phones': 'ay,d', 'kind': 'end' },
+                '-ism': { 'phones': 'ih,z,ah,m', 'kind': 'end' },
                 'ch-': { 'phones': 'ch', 'kind': 'start' },
+                'com-': { 'phones': 'k,ah,m', 'kind': 'start' },
+                'dis-': { 'phones': 'd,ih,s', 'kind': 'start' },
                 'gr-': { 'phones': 'g,r', 'kind': 'start' },
+                're-': { 'phones': 'r,iy', 'kind': 'start' },
                 '-ee-': { 'phones': 'iy', 'kind': 'anywhere' },
                 '-ow-': { 'phones': 'aw', 'kind': 'anywhere' },
                 '-uh-': { 'phones': 'ah', 'kind': 'anywhere' },
@@ -112,7 +122,7 @@ class FilterInterface {
                     } else if (kind=="anywhere") {
                         return phones.includes(opt)
                     }
-                })
+                }, [before, after])
                 this.reset()
             })
         } else if (mode=="word speed") {
@@ -130,10 +140,62 @@ class FilterInterface {
                     } else if (kind=="max") {
                         return pps <= opt
                     }
-                })
+                }, [before, after])
+                this.reset()
+            })
+        } else if (mode=="language") {
+            this.addSelectOption('Keep:', {
+                'nouns': 'nouns', 
+                'singular nouns': 'singular nouns', 
+                'plural nouns': 'plural nouns',
+                'person': 'person',
+                'custom': 'a pattern -->'
+            }, (val) => {
+                kind = val
+                if (val=='custom') {
+                    this.addFieldOption('enter the pattern (#Noun #Verb #Noun #Verb)', (val) => {
+                        opt = val
+                    })
+                }
+            })
+            this.addSubmit(() => {
+                if (kind=='custom') {
+                    const pattern = opt.split(' ')
+                    this.words.filter_sequence((word, idx) => {
+                        if (pattern[idx].charAt(0)=='#') {
+                            // @TODO: multipleconditions, commas separated
+                            return word.data('pos').includes(pattern[idx].substring(1))
+                        } else {
+                            return word.data('word')==pattern[idx].toLowerCase()
+                        }
+                    }, pattern.length)
+                } else {
+                    this.words.filter((word) => {
+                        if (kind=="nouns") {
+                            return word.data('pos').includes('Noun')
+                        } else if (kind=="singular nouns") {
+                            return word.data('pos').includes('Noun') && word.data('pos').includes('Singular')
+                        } else if (kind=="plural nouns") {
+                            return word.data('pos').includes('Noun') && word.data('pos').includes('Plural')
+                        } else if (kind=="person") {
+                            return word.data('pos').includes('Person')
+                        }
+                    }, [before, after])
+                }
                 this.reset()
             })
         }
+
+        this.addFieldOption('before', (val) => {
+            if (val!='before') {
+                before = parseInt(val) 
+            }
+        })
+        this.addFieldOption('after', (val) => {
+            if (val!='after') {
+                after = parseInt(val) 
+            }
+        })
     }
 }
 
