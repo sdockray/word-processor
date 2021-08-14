@@ -1,3 +1,40 @@
+const syllables = phonemes => {
+    const vowels = ['aa', 'ae', 'ah', 'ao', 'aw', 'ay', 'eh', 'er', 'ey', 'ih', 'iy', 'ow', 'oy', 'uh', 'uw']
+    const sounds = phonemes.map(p => (vowels.includes(p[0])) ? 'v' : 'c').join('')
+    let s = sounds
+    let counts = []
+    let sylls = []
+    let offset = s.length
+    while (s.length>0) {
+        if (s.endsWith('cvcc') || s.endsWith('cccv')) {
+            counts.push(s.slice(-4))
+            offset -= 4
+            sylls.push(phonemes.slice(offset, offset + 4))
+            s = s.slice(0, s.length-4)
+        } else if (s.endsWith('ccv') || s.endsWith('cvc') || s.endsWith('vcc')) {
+            counts.push(s.slice(-3))
+            offset -= 3
+            sylls.push(phonemes.slice(offset, offset + 3))
+            s = s.slice(0, s.length-3)
+        } else if (s.endsWith('cv') || s.endsWith('vc')) {
+            counts.push(s.slice(-2))
+            offset -= 2
+            sylls.push(phonemes.slice(offset, offset + 2))
+            s = s.slice(0, s.length-2)
+        } else if (s.endsWith('v')) {
+            counts.push(s.slice(-1))
+            offset -= 1
+            sylls.push(phonemes.slice(offset, offset + 1))
+            s = s.slice(0, s.length-1)
+        } else {
+            counts.push(s)
+            sylls.push(phonemes.slice(0, offset))
+            s = ''
+        }
+    }
+    return sylls.reverse()
+}
+
 class FilterInterface {
     constructor($parent, words) {
         this.words = words
@@ -9,6 +46,7 @@ class FilterInterface {
         this.$filterList.prop('selectedIndex', 0)
         this.$filterList.append($('<option></option>').attr('value', 'word length').text('word length'))
         this.$filterList.append($('<option></option>').attr('value', 'phoneme').text('phoneme'))
+        this.$filterList.append($('<option></option>').attr('value', 'syllables').text('syllables'))
         this.$filterList.append($('<option></option>').attr('value', 'word speed').text('word speed'))
         this.$filterList.append($('<option></option>').attr('value', 'language').text('language'))
         this.$filterList.change((e) => {
@@ -55,6 +93,15 @@ class FilterInterface {
         this.$opts.append(field)
     }
 
+    addCheckbox(title, callback) {
+        let field = $('<input type="checkbox" id="' + title + '" value="remove">')
+        let label = $('<label for="'+ title + '">' + title + '</label>')
+        field.change((e) => {
+            callback(e.target.value)
+        })
+        this.$opts.append(field).append(label)
+    }
+
     addSubmit(callback) {
         let submit = $('<button>').text('process')
         this.$opts.append(submit)
@@ -66,6 +113,7 @@ class FilterInterface {
         let opt = false
         let before = 0
         let after = 0
+        let keep = 1
         if (mode=="word length") {
             this.addSelectOption('what kind?', {'min': 'Minimum word length is', 'max': 'Maximum word length is'}, (val) => {
                 kind = val
@@ -80,7 +128,7 @@ class FilterInterface {
                     } else if (kind=="max") {
                         return word.data('word').length - 1 <= parseInt(opt)
                     }
-                }, [before, after])
+                }, keep, [before, after])
                 this.reset()
             })
         } else if (mode=="phoneme") {
@@ -122,7 +170,7 @@ class FilterInterface {
                     } else if (kind=="anywhere") {
                         return phones.includes(opt)
                     }
-                }, [before, after])
+                }, keep, [before, after])
                 this.reset()
             })
         } else if (mode=="word speed") {
@@ -140,7 +188,27 @@ class FilterInterface {
                     } else if (kind=="max") {
                         return pps <= opt
                     }
-                }, [before, after])
+                }, keep, [before, after])
+                this.reset()
+            })
+        } else if (mode=="syllables") {
+            this.addSelectOption('what kind?', {'count': 'How many', 'min speed': 'Syllables per second (min)', 'max speed': 'Syllables per second (max)', }, (val) => {
+                kind = val
+            })
+            this.addFieldOption('value', (val) => {
+                opt = val
+            })
+            this.addSubmit(() => {
+                this.words.filter((word) => {
+                    const sylls = syllables(word.data('phones'))
+                    if (kind=="count") {
+                        return sylls.length == parseInt(opt)
+                    } else if (kind=="min speed") {
+                        return sylls.length/(parseFloat(word.data('end')) - parseFloat(word.data('start'))) >= parseFloat(opt)
+                    } else if (kind=="max speed") {
+                        return sylls.length/(parseFloat(word.data('end')) - parseFloat(word.data('start'))) <= parseFloat(opt)
+                    }
+                }, keep, [before, after])
                 this.reset()
             })
         } else if (mode=="language") {
@@ -149,6 +217,7 @@ class FilterInterface {
                 'singular nouns': 'singular nouns', 
                 'plural nouns': 'plural nouns',
                 'person': 'person',
+                'sounds': 'sounds',
                 'custom': 'a pattern -->'
             }, (val) => {
                 kind = val
@@ -179,8 +248,10 @@ class FilterInterface {
                             return word.data('pos').includes('Noun') && word.data('pos').includes('Plural')
                         } else if (kind=="person") {
                             return word.data('pos').includes('Person')
+                        } else if (kind=="sounds") {
+                            return word.data('pos').includes('Sound')
                         }
-                    }, [before, after])
+                    }, keep, [before, after])
                 }
                 this.reset()
             })
@@ -194,6 +265,13 @@ class FilterInterface {
         this.addFieldOption('after', (val) => {
             if (val!='after') {
                 after = parseInt(val) 
+            }
+        })
+        this.addCheckbox('remove', (val) => {
+            if (val!='remove') {
+                keep = 1 
+            } else {
+                keep = 0
             }
         })
     }
@@ -212,7 +290,8 @@ class SorterInterface {
         this.$sorterList.append($('<option></option>').attr('value', 'short to long').text('short to long'))
         this.$sorterList.append($('<option></option>').attr('value', 'fast to slow').text('fast to slow'))
         this.$sorterList.append($('<option></option>').attr('value', 'slow to fast').text('slow to fast'))
-        this.$sorterList.append($('<option></option>').attr('value', 'starting sound ascending').text('starting sound ascending'))
+        this.$sorterList.append($('<option></option>').attr('value', 'syllables ascending').text('syllables ascending'))
+        this.$sorterList.append($('<option></option>').attr('value', 'syllables descending').text('syllables descending'))
         this.$sorterList.append($('<option></option>').attr('value', 'starting sound descending').text('starting sound descending'))
         this.$sorterList.append($('<option></option>').attr('value', 'ending sound ascending').text('ending sound ascending'))
         this.$sorterList.append($('<option></option>').attr('value', 'ending sound descending').text('ending sound descending'))
@@ -262,13 +341,25 @@ class SorterInterface {
         }
         else if (mode=="slow to fast") {
             this.words.sort((a, b) => {
-                return a.data('phones').length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) > b.data('phones').length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
+                //return a.data('phones').length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) > b.data('phones').length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
+                return syllables(a.data('phones')).length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) > syllables(b.data('phones')).length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
             })
             this.reset()
         }
         else if (mode=="fast to slow") {
             this.words.sort((a, b) => {
-                return a.data('phones').length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) < b.data('phones').length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
+                //return a.data('phones').length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) < b.data('phones').length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
+                return syllables(a.data('phones')).length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) < syllables(b.data('phones')).length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
+            })
+            this.reset()
+        } else if (mode=="syllables ascending") {
+            this.words.sort((a, b) => {
+                return syllables(a.data('phones')).length > syllables(b.data('phones')).length
+            })
+            this.reset()
+        } else if (mode=="syllables descending") {
+            this.words.sort((a, b) => {
+                return syllables(a.data('phones')).length < syllables(b.data('phones')).length
             })
             this.reset()
         } else if (mode=="starting sound ascending") {

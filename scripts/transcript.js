@@ -76,7 +76,7 @@ class Transcript {
         //    const mediaId = segments[0].media_id
             let spec = []
             let curT = 0
-            spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'video', opacity: [[0,1]]})
+            //spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'video', opacity: [[0,1]]})
             spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'audio', volume: [[0,1]]})
             curT += end - start
             // const sampler = new Sampler()
@@ -90,7 +90,10 @@ class Transcript {
                     seq: spec,
                     duration: curT,
                     size: 240,
-                    ext: 'mp4'
+                    pre_padding: 0.05,
+                    post_padding: 0.05,
+                    codec: 'wav'
+                    //ext: 'mp4'
                 })
             }, start+'-'+end, start+'-'+end)
             //.then(sample => {
@@ -141,7 +144,7 @@ class TranscriptInterface {
     filter_sequence(filterFunc, targetLength) {
         // this.filter(filterFunc, leadingTrailing)
         const visibleWords = this.$transcript.find('.w:visible')
-        const speed = Math.round(2000/visibleWords.length)+2
+        let speed = Math.round(2000/visibleWords.length)+2
         const that = this
         let candidate = []
         let phrases = []
@@ -160,6 +163,9 @@ class TranscriptInterface {
             }
         })
         $.each(visibleWords, function (index, item) {
+            if (index > 200) {
+                speed = 0
+            }
             if (!$(item).hasClass('select')) {
                 setTimeout(() => {
                     $(item).fadeOut("slow")
@@ -177,14 +183,15 @@ class TranscriptInterface {
         })
     }
 
-    filter(filterFunc, leadingTrailing=[0,0]) {
+    filter(filterFunc, keep=1, leadingTrailing=[0,0]) {
         const visibleWords = this.$transcript.find('.w:visible')
         const speed = Math.round(2000/visibleWords.length)+2
         // const speed = 2
         const that = this
         let phrases = []
         $.each(visibleWords, function (index, item) {
-            if (filterFunc($(item))) {
+            const r = filterFunc($(item))
+            if ( r == keep ) {// !XOR
                 let words = [$(item)]
                 $(item).addClass('select')
                 let $i = $(item)
@@ -241,6 +248,7 @@ class TranscriptInterface {
     addRenderedWord($w) {
         this.$transcript.append($w).removeClass('selected')
         this.transcript.loadAudio(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end')).then(sample => {
+            //sample.on('starting', console.log('XXX STARTING XXX'));
             $w.addClass('loaded')
         })
     }
@@ -250,8 +258,29 @@ class TranscriptInterface {
         // this.transcript.loadSegmentAudio(this.sequencer.sampler, segment)
         const pos = await cheap_nlp(wdlist.map(w => w.word).join(''))
         let idx = 0
+        let lastEnd = segment.start
         for (let wd of wdlist) {
             // console.log(wd)
+            if (wd.start > lastEnd + 1) {
+                const cleanWord = '['+ '.'.repeat(Math.round((wd.start - lastEnd)*3)) + ']'
+                const $w = $("<span>").addClass('w').text(cleanWord).data({
+                    start: lastEnd,
+                    end: wd.start,
+                    word: cleanWord,
+                    phones: [],
+                    mediaId: segment.media_id,
+                    docId: this.transcript.docId,
+                    pos: ['Sound']
+                })
+                $w.on('mousedown', () => {
+                    $w.toggleClass('selected')
+                    //this.sequencer.sampler.play(wd.start +"-"+ wd.end)
+                    this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, $w.data('start'), $w.data('end'))
+                        .then(sample => { sample.play() })
+                })
+                $parent.append($w)
+            }
+            lastEnd = wd.end
             const cleanWord = wd.word.replace(regex, '').toLowerCase()
             const $w = $("<span>").addClass('w').text(wd.word).data({
                 start: wd.start,

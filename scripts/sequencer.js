@@ -1,3 +1,4 @@
+
 class Sample {
   constructor(url, player) {
     // console.log(url)
@@ -14,6 +15,8 @@ class Sample {
     this.pitchShifter = false
     this.start = -1
     this.duration = -1
+
+    this.play
   }
 
   setSpan(start, duration) {
@@ -42,6 +45,7 @@ class Sample {
       this.player.onstop()
       return
     }
+    //this.emit('starting')
     this.player.volume.value = 20
     if (this.start>=0 && this.duration>=0) {
       this.player.start("0.05", this.start + .05, this.duration)

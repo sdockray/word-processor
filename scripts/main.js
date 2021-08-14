@@ -12,6 +12,7 @@ async function loadTranscriptList() {
     })
 }
 
+
 function buildStage($parent) {
     $stageContainer = $('<div>').addClass('stage')
     const $stage = $('<div>').addClass('words')
@@ -76,11 +77,17 @@ async function start() {
         //transcriptInterface.loadTranscript(e.target.value, `transcripts/${e.target.value}.json`)
         transcriptInterface.loadTranscript(e.target.value)
         //
+        let selectAllMode = true
         $('#selectAllButton').show()
         $('#selectAllButton').on('click', () => {
             $.each(transcriptInterface.$transcript.find('.w:visible'), function(index, item) {
-                $(item).addClass('selected')
+                if (selectAllMode) {
+                    $(item).addClass('selected')
+                } else {
+                    $(item).removeClass('selected')
+                }
             })
+            selectAllMode = !selectAllMode
         })
         //
         $('#sendButton').show()
