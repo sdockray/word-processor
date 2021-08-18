@@ -14,7 +14,7 @@ async function loadTranscriptList() {
 
 
 function buildStage($parent) {
-    $stageContainer = $('<div>').addClass('stage')
+    $stageContainer = $('<div>').addClass('stage card bg-gray-700')
     const $stage = $('<div>').addClass('words')
     const stage = new TranscriptInterface($stage)
     spirit.addSequencer(stage.sequencer)
@@ -24,7 +24,7 @@ function buildStage($parent) {
     const $sorters = $('<div>')
     // const $interval = $('<input>').addClass('interval').attr('placeholder', '4n').val("4n")
     const intervals = ["1n", "2n", "4n", "8n", "16n"]
-    $interval = $('<select>')
+    $interval = $('<select>').addClass('select input-xsmall form-group-input bg-gray-200')
     $.each(intervals, function (key, entry) {
         $interval.append($('<option></option>').attr('value', entry).text(entry))
     })
@@ -32,7 +32,8 @@ function buildStage($parent) {
     $interval.change((e) => {
         stage.sequencer.setInterval(e.target.value, $offset.val())
     })
-    const $offset = $('<input>').addClass('offset').val("0")
+    const $offset = $('<input>').addClass('offset form-group-input input-xsmall bg-gray-200').val("0")
+    $offset.prop('type', 'number')
     $interval.on('keypress', function (e) {
         if(e.which === 13){
             //Disable textbox to prevent multiple submit
@@ -43,9 +44,17 @@ function buildStage($parent) {
             $(this).removeAttr("disabled")
         }
     })
-    const stageFilters = new FilterInterface($filters, stage)
-    const stageSorters = new SorterInterface($sorters, stage)
-    $stageContainer.append($filters).append($sorters).append($stage).append($interval).append($offset)
+    //const stageFilters = new FilterInterface($filters, stage)
+    //const stageSorters = new SorterInterface($sorters, stage)
+    const thisWordInfo = new WordInfoInterface($('#wordInfo'), stage)
+    $stage.on('wordSelected', (event, $w) => {
+        thisWordInfo.setActiveWord($w)
+    })
+    $intervalLabel = $('<label>').addClass("form-group-label label-xsmall").text('interval')
+    $offsetLabel = $('<label>').addClass("form-group-label label-xsmall").text('offset')
+    $intervalOffsetContainer = $('<div>').addClass('form-group').append($intervalLabel).append($interval).append($offsetLabel).append($offset)
+    //$stageContainer.append($filters).append($sorters).append($stage).append($intervalOffsetContainer)
+    $stageContainer.append($stage).append($intervalOffsetContainer)
     $parent.append($stageContainer)
     $stageContainer.hide()
 }
@@ -55,20 +64,18 @@ async function start() {
     let dropdown = $('#transcriptChooser')
     dropdown.empty()
     dropdown.append('<option selected="true" disabled>load a transcript</option>')
-    dropdown.prop('selectedIndex', 0)
     loadTranscriptList().then(transcriptData => {
         $.each(transcriptData, function (key, entry) {
             dropdown.append($('<option></option>').attr('value', key).text(entry))
         })    
     })
-    /*
-    $.each(transcriptData, function (key, entry) {
-        dropdown.append($('<option></option>').attr('value', key).text(entry))
-    })    
-    */
     let transcriptInterface = new TranscriptInterface($("#transcript"))
     const transcriptFilters = new FilterInterface($('#transcriptFilters'), transcriptInterface)
     const transcriptSorters = new SorterInterface($('#transcriptSorters'), transcriptInterface)
+    const wordInfo = new WordInfoInterface($('#wordInfo'), transcriptInterface)
+    $("#transcript").on('wordSelected', (event, $w) => {
+        wordInfo.setActiveWord($w)
+    })
     transcriptFilters.hide()
     transcriptSorters.hide()
     
@@ -121,9 +128,17 @@ async function start() {
         })
         spirit.playOnBeat()
     })
-    $('#recordButton').on('click', () => {
-        stage.getCurrentSequence()
-        stage.sequencer.record()
+    // expand and contract stage
+    $('#expandButton').on('click', () => {
+        if ($('#leftSide').hasClass('col-2')) {
+            $('#middleSide').hide()
+            $('#leftSide').removeClass('col-2')
+            $('#leftSide').addClass('col-10')
+        } else {
+            $('#middleSide').show()
+            $('#leftSide').removeClass('col-10')
+            $('#leftSide').addClass('col-2')
+        }
     })
     $('#bpm').on('keypress', function (e) {
         if(e.which === 13){
@@ -147,5 +162,15 @@ async function start() {
         }
     })
 }
+
+
+document.addEventListener('mouseup', event => {  
+    if (window.getSelection().toString().length){
+       let selection = window.getSelection()
+       let range = selection.getRangeAt(0)
+       //let selectedFragment = range.cloneContents()
+       console.log(range)        
+    }
+})
 
 start();

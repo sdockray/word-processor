@@ -91,7 +91,7 @@ class Transcript {
                     duration: curT,
                     size: 240,
                     pre_padding: 0.05,
-                    post_padding: 0.05,
+                    post_padding: 0,
                     codec: 'wav'
                     //ext: 'mp4'
                 })
@@ -183,6 +183,11 @@ class TranscriptInterface {
         })
     }
 
+    trigger(event, params) {
+        const visibleWords = this.$transcript.find('.w:visible')
+        visibleWords.trigger(event, params)
+    }
+
     filter(filterFunc, keep=1, leadingTrailing=[0,0]) {
         const visibleWords = this.$transcript.find('.w:visible')
         const speed = Math.round(2000/visibleWords.length)+2
@@ -215,11 +220,13 @@ class TranscriptInterface {
             if (!$(item).hasClass('select')) {
                 setTimeout(() => {
                     $(item).fadeOut("slow")
+                    //$(item).wrap('<del/>')
                 }, index*speed)
             } else {
                 setTimeout(() => {
                     $(item).removeClass('select')
                     $(item).addClass('selected')
+                    //$(item).wrap('<mark/>')
                     //that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
                 }, index*speed)
             }
@@ -246,14 +253,21 @@ class TranscriptInterface {
     }
 
     addRenderedWord($w) {
+        const that = this
         this.$transcript.append($w).removeClass('selected')
+        // const end = $w.data('start') + $w.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= 1) ? a + b: a )
         this.transcript.loadAudio(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end')).then(sample => {
             //sample.on('starting', console.log('XXX STARTING XXX'));
+            sample.setElement($w)
             $w.addClass('loaded')
+        })
+        $w.on('mousedown', () => {
+            that.$parent.trigger("wordSelected", [$w])
         })
     }
 
     async renderWords(wdlist, segment, $parent) {
+        const that = this
         const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ]/g
         // this.transcript.loadSegmentAudio(this.sequencer.sampler, segment)
         const pos = await cheap_nlp(wdlist.map(w => w.word).join(''))
@@ -267,6 +281,7 @@ class TranscriptInterface {
                     start: lastEnd,
                     end: wd.start,
                     word: cleanWord,
+                    oWord: false,
                     phones: [],
                     mediaId: segment.media_id,
                     docId: this.transcript.docId,
@@ -286,6 +301,7 @@ class TranscriptInterface {
                 start: wd.start,
                 end: wd.end,
                 word: cleanWord,
+                oWord: wd.word,
                 phones: wd.phones,
                 mediaId: segment.media_id,
                 docId: this.transcript.docId,
@@ -297,12 +313,16 @@ class TranscriptInterface {
             }
             //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, wd.start, wd.end)
             //this.transcript.loadLocalAudio(this.sequencer.sampler, wd.start, wd.end, "samples/" + this.transcript.docId)
+            
             $w.on('mousedown', () => {
-                $w.toggleClass('selected')
+                that.$parent.trigger("wordSelected", [$w])
+                
+                // $w.toggleClass('selected')
                 //this.sequencer.sampler.play(wd.start +"-"+ wd.end)
-                this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, wd.start, wd.end)
-                    .then(sample => { sample.play() })
+                //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, wd.start, wd.end)
+                //    .then(sample => { sample.play() })
             })
+            
             $parent.append($w)
         }
     }

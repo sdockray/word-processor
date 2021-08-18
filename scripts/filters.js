@@ -396,3 +396,146 @@ class SorterInterface {
         }
     }
 }
+
+class WordInfoInterface {
+    constructor($parent, words) {
+        this.words = words
+        this.$info = $parent
+    }
+
+    openModal() {
+        window.location = (""+window.location).replace(/#[A-Za-z0-9_\-]*$/,'')+'#filter-modal'
+        $('#filter-modal .modal-body > div').hide()
+    }
+
+    getLettersCount(str) {
+        return [...str].reduce((res, char) => (res[char] = (res[char] || 0) + 1, res), {})
+    }
+
+    setActiveWord($ele) {
+        this.$info.removeClass('u-none')
+        const duration = $ele.data('end') - $ele.data('start')
+        const length = $ele.data('word').length
+        const sylls = syllables($ele.data('phones'))
+        const syllDurs = sylls.map(s => s.map(p => p[1]).reduce((a, b) => a + b)).map(s => s.toFixed(2))
+        const phones = $ele.data('phones').map(p => p[0])
+        const letters = this.getLettersCount($ele.data('word'))
+        //console.log(this.$info.find('.card__header > p'))
+        this.$info.find('.card__header > p').text($ele.text())
+        this.$info.find('.info_length > td').text(length)
+        this.$info.find('.info_duration > td').text(duration.toFixed(3))
+        this.$info.find('.info_syllables > td').text(sylls.length)
+        this.$info.find('.info_syllableLengths > td').text(syllDurs.join(', '))
+        this.$info.find('.info_syllableSpeed > td').text((sylls.length/duration).toFixed(3) + " /s")
+        this.$info.find('.info_phones > td').text(phones.length)
+        this.$info.find('.info_phoneList > td').text(phones.join(','))
+        this.$info.find('.info_phoneSpeed > td').text((phones.length/duration).toFixed(3) + " /s")
+        this.$info.find('.info_nlp > td').text($ele.data('pos').join(', '))
+        //
+        let keys = Object.keys(letters)
+        keys.sort()
+        let counts = []
+        for (const key of keys) {
+            counts.push(key + ":" + letters[key])
+        }
+        this.$info.find('.info_letters > td').text(counts.join(', '))
+        //
+        this.handleDuration(duration)
+        this.handleLength(length)
+        this.handlePhones(phones, $ele)
+    }
+
+    handleDuration(duration, $w){
+        this.$info.find('.info_duration').on('click', () => {
+            this.openModal()
+            const $mEle = $('#filter-modal .modal-body .duration')
+            $mEle.show()
+            $mEle.find('input').val(duration.toFixed(3))
+            $mEle.find('button.shorter').on('click', () => {
+                const opt = $mEle.find('input').val()
+                this.words.filter((word) => {
+                    return word.data('end') - word.data('start') <= parseFloat(opt)
+                }, true, [0, 0])
+            })
+            $mEle.find('button.longer').on('click', () => {
+                const opt = $mEle.find('input').val()
+                this.words.filter((word) => {
+                    return word.data('end') - word.data('start') >= parseFloat(opt)
+                }, true, [0, 0])
+            })
+            $mEle.find('button.within').on('click', () => {
+                const opt = $mEle.find('input').val()
+                this.words.filter((word) => {
+                    const d = word.data('end') - word.data('start')
+                    return d >= parseFloat(opt) - 0.05 && d <= parseFloat(opt) + 0.05   
+                }, true, [0, 0])
+            })
+            $mEle.find('button.short-to-long').on('click', () => {
+                this.words.sort((a, b) => {
+                    const ad = a.data('end') - a.data('start')
+                    const bd = b.data('end') - b.data('start')
+                    return ad > bd
+                })
+            })
+            $mEle.find('button.long-to-short').on('click', () => {
+                this.words.sort((a, b) => {
+                    const ad = a.data('end') - a.data('start')
+                    const bd = b.data('end') - b.data('start')
+                    return ad < bd
+                })
+            })
+        })
+    }
+
+    handleLength(length){
+        this.$info.find('.info_length').on('click', () => {
+            this.openModal()
+            const $mEle = $('#filter-modal .modal-body .length')
+            $mEle.show()
+            $mEle.find('input').val(length)
+            $mEle.find('button.shorter').on('click', () => {
+                const opt = $mEle.find('input').val()
+                this.words.filter((word) => {
+                    return !word.data('pos').includes('Sound') && word.data('word').length <= parseInt(opt)
+                }, true, [0, 0])
+            })
+            $mEle.find('button.longer').on('click', () => {
+                const opt = $mEle.find('input').val()
+                this.words.filter((word) => {
+                    return !word.data('pos').includes('Sound') && word.data('word').length >= parseInt(opt)
+                }, true, [0, 0])
+            })
+            $mEle.find('button.within').on('click', () => {
+                const opt = $mEle.find('input').val()
+                this.words.filter((word) => {
+                    return !word.data('pos').includes('Sound') && word.data('word').length == parseInt(opt)   
+                }, true, [0, 0])
+            })
+            $mEle.find('button.short-to-long').on('click', () => {
+                this.words.sort((a, b) => {
+                    return a.data('word').length > b.data('word').length
+                })
+            })
+            $mEle.find('button.long-to-short').on('click', () => {
+                this.words.sort((a, b) => {
+                    return a.data('word').length < b.data('word').length
+                })
+            })
+        })
+    }
+
+    handlePhones(phones, $w){
+        this.$info.find('.info_phones,.info_phoneList,.info_phoneSpeed').on('click', () => {
+            this.openModal()
+            const $mEle = $('#filter-modal .modal-body .phonemes')
+            $mEle.show()
+            $mEle.find('.extract button.this').on('click', () => {
+                $w.trigger('focusPhones', [$mEle.find('.extract select').val(), $mEle.find('.extract input').val()])
+            })
+            $mEle.find('.extract button.all').on('click', () => {
+                this.words.trigger('focusPhones', [$mEle.find('.extract select').val(), $mEle.find('.extract input').val()])
+            })
+        })
+    }
+
+}

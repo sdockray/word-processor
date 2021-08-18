@@ -15,8 +15,33 @@ class Sample {
     this.pitchShifter = false
     this.start = -1
     this.duration = -1
+    this.$ele = false
 
     this.play
+  }
+
+  setElement($ele) {
+    const that = this
+    this.$ele = $ele
+    $ele.on('focusPhones', (event, mode, num) => {
+      if (mode=='starting') {
+        that.setSpan(0 , $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= num) ? a + b: a ))
+        const phonesStr = $ele.data('phones').map(p => p[0]).slice(0, num).join(',')
+        $ele.text(phonesStr)
+      } else if (mode=='ending') {
+        const nPhones = $ele.data('phones').length - num
+        const dur1 = $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= nPhones) ? a + b: a )
+        that.setSpan(dur1 , $ele.data('end') - $ele.data('start') - dur1)
+        const phonesStr = $ele.data('phones').map(p => p[0]).slice(-1*num).join(',')
+        $ele.text(phonesStr)
+      } else if (mode=="reset") {
+        this.start = -1
+        this.duration = -1
+        const phonesStr = $ele.data('oWord')
+        $ele.text(phonesStr)
+      }
+    })
+    // this.setSpan(0 , $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= 3) ? a + b: a ))
   }
 
   setSpan(start, duration) {
@@ -49,8 +74,10 @@ class Sample {
     this.player.volume.value = 20
     if (this.start>=0 && this.duration>=0) {
       this.player.start("0.05", this.start + .05, this.duration)
+      //this.player.start(0, this.start, this.duration)
     } else {
       this.player.start("0.05")
+      //this.player.start()
     }
   }
 
