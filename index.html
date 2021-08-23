@@ -23,6 +23,10 @@ and 'webpack --watch' if you ever clone this repo -->
 </head>
 <body class="bg-yellow-300">
     
+    <video id="video-1"></video>
+    <video id="video-2"></video>
+    <video id="video-3"></video>
+
     <section>
         <div>
             <div class="row">
@@ -32,6 +36,7 @@ and 'webpack --watch' if you ever clone this repo -->
                             <button id="playButton" class="form-group-btn btn-primary btn-small bg-gray-700">&#9658;</button>
                             <input id="bpm" class="form-group-input input-small" type="number" step="1" value="60">
                             <label class="form-group-label label-small">wpm</label>
+                            <button id="enableVideo" class="form-group-btn btn-primary btn-small bg-black u-none"></button>
                             <button id="expandButton" class="form-group-btn btn-primary btn-small bg-gray-700">&harr;</button>
                         </div>
                     </div>
@@ -67,6 +72,14 @@ and 'webpack --watch' if you ever clone this repo -->
                                         <th>duration:</th>
                                         <td class="u-text-left"></td>
                                     </tr>
+                                    <tr class="info_time">
+                                        <th>time:</th>
+                                        <td class="u-text-left"></td>
+                                    </tr>
+                                    <tr class="info_time2">
+                                        <th>(sentence)</th>
+                                        <td class="u-text-left"></td>
+                                    </tr>
                                     <tr class="info_syllables">
                                         <th>syllables:</th>
                                         <td class="u-text-left"></td>
@@ -91,7 +104,7 @@ and 'webpack --watch' if you ever clone this repo -->
                                         <th></th>
                                         <td class="u-text-left"></td>
                                     </tr>
-                                    <tr class="info_nlp">
+                                    <tr class="info_pos">
                                         <th>pos:</th>
                                         <td class="u-text-left"></td>
                                     </tr>
@@ -126,6 +139,16 @@ and 'webpack --watch' if you ever clone this repo -->
                 </a>
             </div>
             <div class="modal-body content">
+                <div class="col-lg-6 word">
+                    <label>Word</label>
+                    <input class="input-xsmall my-2" value="">
+                    <span class="info">for multiple words, separate with commas</span>
+                    <button class="btn-success btn-xsmall keep">keep</button>
+                    <button class="btn-success btn-xsmall remove">remove</button>
+                    <div class="divider"></div>
+                    <button class="btn-info btn-xsmall alpha">sort A-Z</button>
+                    <button class="btn-info btn-xsmall r-alpha">sort Z-A</button>
+                </div>
                 <div class="col-lg-6 duration">
                     <label>Duration</label>
                     <input class="input-xsmall my-2" type="number" step="0.001" value="0">
@@ -135,6 +158,29 @@ and 'webpack --watch' if you ever clone this repo -->
                     <div class="divider"></div>
                     <button class="btn-info btn-xsmall short-to-long">sort short to long</button>
                     <button class="btn-info btn-xsmall long-to-short">sort long to short</button>
+                </div>
+                <div class="col-lg-6 time">
+                    <label>Time</label>
+                    <span class="info">Filter across the whole transcript</span>
+                    <div class="form-group global">
+                        <label class="form-group-label label-small">keep</label>
+                        <button class="form-group-btn btn-primary btn-small before">before</button>
+                        <button class="form-group-btn btn-primary btn-small after">after</button>
+                        <input class="input-small form-group-input" type="number" step=".01" value="0">
+                    </div>
+                    <div class="divider"></div>
+                    <span class="info">Filter within each sentence in the transcript</span>
+                    <div class="form-group local">
+                        <label class="form-group-label label-small">keep</label>
+                        <button class="form-group-btn btn-primary btn-small before">before</button>
+                        <button class="form-group-btn btn-primary btn-small after">after</button>
+                        <input class="input-small form-group-input" type="number" step=".01" value="0">
+                    </div>
+                    <div class="divider"></div>
+                    <button class="btn-info btn-xsmall chron">chronological</button>
+                    <button class="btn-info btn-xsmall r-chron">reverse chronological</button>
+                    <button class="btn-info btn-xsmall chron2">chronological (in sentence)</button>
+                    <button class="btn-info btn-xsmall r-chron2">reverse chronological (in sentence)</button>
                 </div>
                 <div class="col-lg-6 length">
                     <label>Length</label>
@@ -160,6 +206,17 @@ and 'webpack --watch' if you ever clone this repo -->
                     <button class="btn-info btn-xsmall long-to-short">sort by phoneme (reverse)</button>
                     <div class="divider"></div>
                     -->
+                    <div class="form-group filter">
+                        <label class="form-group-label label-small">find</label>
+                        <input class="input-small form-group-input" value="">
+                        <select class="select input-small form-group-input">
+                            <option value="start">at start</option>
+                            <option value="end">at end</option>
+                            <option value="any">anywhere</option>
+                        </select>
+                        <button class="form-group-btn btn-primary btn-small">keep</button>
+                    </div>
+                    <div class="divider"></div>
                     <div class="form-group extract">
                         <label class="form-group-label label-small">extract</label>
                         <input class="input-small form-group-input" type="number" step="1" value="3">
@@ -171,6 +228,23 @@ and 'webpack --watch' if you ever clone this repo -->
                         <button class="form-group-btn btn-primary btn-small this">this</button>
                         <button class="form-group-btn btn-primary btn-small all">all</button>
                     </div>
+                </div>
+                <div class="col-lg-6 pos">
+                    <label>Parts of Speech</label>
+                    <input class="input-small my-2" value="">
+                    <button class="btn-success btn-small keep">keep</button>
+                    <button class="btn-success btn-small remove">remove</button>
+                    <span class="info">a part of speech is like #Noun</span>
+                    <span class="info">define a combination like #Noun+#Plural</span>
+                    <span class="info">for an either-or, so #Noun,#Plural</span>
+                    <span class="info">for phrase, separate words with spaces: #Noun #Verb</span>
+                    <span class="info">you can include words in your phrase: #Adjective computer</span>
+                </div>
+                <div class="col-lg-6 letters">
+                    <label>Letters</label>
+                    <input class="input-small my-2" value="">
+                    <button class="btn-success btn-small keep">keep</button>
+                    <span class="info">Words with at least this many of each letter</span>
                 </div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 
-class Sample {
+class AudioSample {
   constructor(url, player) {
     // console.log(url)
     if (url) {
@@ -17,7 +17,7 @@ class Sample {
     this.duration = -1
     this.$ele = false
 
-    this.play
+    //this.play
   }
 
   setElement($ele) {
@@ -89,70 +89,110 @@ class Sample {
     this.player.onstop = () => {}
   }
 
-  adjustPitch(by) {
-    if (!this.shifter) {
-      this.shifter = new Tone.PitchShift().toDestination()
-      console.log(by, this.shifter.pitch)
-      this.player.connect(this.shifter)
-    }
-    this.shifter.pitch += by
-  }
-
-  adjustRate(by) {
-    this.player.playbackRate = this.player.playbackRate*by
-  }
-
-
-  // this.shifter = new Tone.PitchShift({pitch: -1}).toDestination()
-  // sample.connect(this.shifter)
-  // this.samples[idx].
-  // add pitch shifter, player label, etc
 }  
-  
+
+
+class SmoothVideo {
+  constructor($ele) {
+    this.$video = $ele
+  }
+
+  loadAndPlay(src, onstop) {
+    const that = this
+    const $cloned = this.$video.clone()
+    this.$video.parent().append($cloned)
+    this.$video.addClass('garbage')
+    const z = this.$video.css('z-index')
+    $cloned.css("z-index", z+1)
+    // once loaded swap and play
+    $cloned.get(0).addEventListener('loadeddata', () => {
+      // that.$video.replaceWith($cloned)
+      that.$video = $cloned
+      $('.garbage').remove()
+    }, {once: true})
+    // once it can play, play
+    $cloned.get(0).addEventListener('canplay', () => {
+      $cloned.get(0).play()
+    }, {once: true})
+    // what to do when it ends
+    $cloned.get(0).addEventListener('ended', () => {
+      onstop()
+    }, {once: true})
+    $cloned.css("z-index", z+1)
+    $cloned.get(0).src = src
+  }
+}
+
+
+class VideoSample {
+  constructor(url, player) {
+    // console.log(url)
+    this.url = url
+    this.player = player
+    this.loop = true
+    this.label = "..."
+    this.start = -1
+    this.duration = -1
+    this.$ele = false
+    this.onstop = () => {}
+
+  }
+
+  setElement($ele) {
+    const that = this
+    this.$ele = $ele
+  }
+
+  setSpan(start, duration) {
+    this.start = start
+    this.duration = duration
+  }
+
+  setLabel(label) {
+    this.label = label
+  }
+
+  loop(stop) {
+    this.loop = !stop
+  }
+
+  play(onstop) {
+    // this.samples[idx].playbackRate = 1.75;
+    //console.log(this.label, onstop)
+    if (onstop) {
+      this.onstop = onstop
+    } else {
+      this.onstop = () => {}
+    }
+    if (!this.url) {
+      // console.log('not loaded')
+      this.onstop()
+      return
+    }
+    if (this.start>=0 && this.duration>=0) {
+      // @TODO: play range
+      this.player.loadAndPlay(this.url, this.onstop)
+    } else {
+      this.player.loadAndPlay(this.url, this.onstop)
+    }
+  }
+
+  playTime(time) {
+    this.play()
+  }
+
+  clearCallback() {
+    this.onstop = () => {}
+  }
+
+}  
+
+
 // Contains the samples and is able to play them
 class Sampler {
   constructor() {
     this.samples = {}
-    this.add = this.add.bind(this)
     this.play = this.play.bind(this)
-  }
-
-  async addFetch(url, opts, idx, label) {
-    if (Array.isArray(idx)) {
-      await fetch(url, opts)
-      .then(response => response.arrayBuffer())
-      .then(arrayBuffer => Tone.context.decodeAudioData(arrayBuffer))
-      .then(audioBuffer => {
-        const player = new Tone.Player({url: audioBuffer})
-        player.toDestination()
-        for (const p of idx) {
-          this.samples[p.idx] = new Sample(false, player)
-          this.samples[p.idx].setLabel(p.label)
-          this.samples[p.idx].setSpan(p.start, p.duration)
-        }
-        //console.log(this.samples)
-        return true
-      })
-      .catch(console.log)
-    } else {
-      return await fetch(url, opts)
-      .then(response => response.arrayBuffer())
-      .then(arrayBuffer => Tone.context.decodeAudioData(arrayBuffer))
-      .then(audioBuffer => {
-        return this.add(audioBuffer, idx, label)
-      })
-      .catch(console.log)
-    }
-  }
-  
-  add(url, idx, label) {
-    if (!this.samples.hasOwnProperty(idx)) {
-      this.samples[idx] = new Sample(url)
-      this.samples[idx].setLabel(label)
-      return this.samples[idx]
-    } else {
-      return this.samples[idx]
-    }
   }
 
   remove(idx) {
@@ -195,20 +235,136 @@ class Sampler {
 
 }
 
+
+class AudioSampler extends Sampler {
+  constructor() {
+    super()
+  }
+
+  addSample(url, idx, label) {
+    if (!this.samples.hasOwnProperty(idx)) {
+      this.samples[idx] = new AudioSample(url)
+      this.samples[idx].setLabel(label)
+      return this.samples[idx]
+    } else {
+      return this.samples[idx]
+    }
+  }
+
+  async addFetch(url, opts, idx, label) {
+    if (Array.isArray(idx)) {
+      await fetch(url, opts)
+      .then(response => response.arrayBuffer())
+      .then(arrayBuffer => Tone.context.decodeAudioData(arrayBuffer))
+      .then(audioBuffer => {
+        const player = new Tone.Player({url: audioBuffer})
+        player.toDestination()
+        for (const p of idx) {
+          this.samples[p.idx] = new AudioSample(false, player)
+          this.samples[p.idx].setLabel(p.label)
+          this.samples[p.idx].setSpan(p.start, p.duration)
+        }
+        //console.log(this.samples)
+        return true
+      })
+      .catch(console.log)
+    } else {
+      return await fetch(url, opts)
+      .then(response => response.arrayBuffer())
+      .then(arrayBuffer => Tone.context.decodeAudioData(arrayBuffer))
+      .then(audioBuffer => {
+        return this.addSample(audioBuffer, idx, label)
+      })
+      .catch(console.log)
+    } 
+  }
+}
+
+
+class VideoSampler extends Sampler {
+  constructor() {
+    super()
+    this.player = false
+  }
+
+  setPlayer(player) {
+    this.player = new SmoothVideo(player)
+    for (const s in this.samples) {
+      this.samples[s].player = this.player
+    }
+  }
+
+  addSample(url, idx, label) {
+    if (!this.samples.hasOwnProperty(idx)) {
+      this.samples[idx] = new VideoSample(url, this.player)
+      this.samples[idx].setLabel(label)
+      return this.samples[idx]
+    } else {
+      return this.samples[idx]
+    }
+  }
+
+  async addFetch(url, opts, idx, label) {
+    if (Array.isArray(idx)) {
+      await fetch(url, opts)
+      .then(response => response.arrayBuffer())
+      .then(arrayBuffer => Tone.context.decodeAudioData(arrayBuffer))
+      .then(audioBuffer => {
+        const player = new Tone.Player({url: audioBuffer})
+        player.toDestination()
+        for (const p of idx) {
+          this.samples[p.idx] = new Sample(false, player)
+          this.samples[p.idx].setLabel(p.label)
+          this.samples[p.idx].setSpan(p.start, p.duration)
+        }
+        //console.log(this.samples)
+        return true
+      })
+      .catch(console.log)
+    } else {
+      return await fetch(url, opts)
+      .then(response => response.arrayBuffer())
+      .then(arrayBuffer => {
+        const blob = new Blob([arrayBuffer], {type: "video/mp4"})
+        return URL.createObjectURL(blob)
+      })
+      .then(url => {
+        return this.addSample(url, idx, label)
+      })
+      .catch(console.log)
+    }
+  }  
+}
+
+
 // Triggers samples in some kind of a sequence. Needs a sampler to start with.
 class Sequencer {
   constructor(sampler) {
-    this.sampler = new Sampler()
+    this.audioSampler = new AudioSampler()
+    this.videoSampler = new VideoSampler()
+    this.sampler = this.audioSampler
     this.sequence = []
     this.sequenceIdx = 0
     this.interval = "4n"
     this.offset = 0
-    this.looping = false
+    this.looping = true
     this.sequencing = false
     this.transportOffsetTime = 0
     this.add = this.add.bind(this)
     this.set = this.set.bind(this)
     this.play = this.play.bind(this)
+  }
+
+  setVideoPlayer(videoPlayer) {
+    this.videoSampler.setPlayer(videoPlayer)
+  }
+
+  useSampler(mode) {
+    if (mode=="video") {
+      this.sampler = this.videoSampler
+    } else {
+      this.sampler = this.audioSampler
+    }
   }
 
   addSample(url, id, label) {
@@ -226,13 +382,15 @@ class Sequencer {
   }
 
   playNext(i) {
-    if (i < this.sequence.length) {
-      this.sampler.play(this.sequence[i], () => {
-        this.playNext(i+1)
-        this.sampler.clearCallback(this.sequence[i])
-      })
-    } else if (this.looping) {
-      this.playNext(0)
+    if (i===0 || Tone.Transport.state == "started") {
+      if (i < this.sequence.length) {
+        this.sampler.play(this.sequence[i], () => {
+          this.playNext(i+1)
+          this.sampler.clearCallback(this.sequence[i])
+        })
+      } else if (this.sequence.length && this.looping) {
+        this.playNext(0)
+      }
     }
   }
 
@@ -240,83 +398,14 @@ class Sequencer {
     this.playNext(0)
   }
 
-  async record() {
-    const recorder = new Tone.Recorder()
-    if (Tone.Transport.state == "started") {
-      Tone.Transport.stop()
-      Tone.Transport.cancel()
-    }
-    const that = this
-    // Connect all players to the recorder
-    for (const sampleId in this.sampler.samples) {
-      this.sampler.samples[sampleId].player.connect(recorder)
-    }
-    // set up callback for saving file
-    const stopRecording = () => {
-      console.log("STOP RECORDING")
-      return recorder.stop().then(recording => {
-        const url = URL.createObjectURL(recording)
-        make_download(url)
-        return url
-      })
-    }
-    const pass = () => {}
-    let currCB = pass
-    // Do the sequence
-    Tone.Transport.scheduleRepeat((time) => {
-      // Start recording at the start of the sequence
-      if (that.sequenceIdx===0) {
-        recorder.start()
-      }
-      if (that.sequenceIdx == that.sequence.length-1) {
-        currCB = stopRecording
-      } 
-      that.sampler.play(that.sequence[that.sequenceIdx], currCB)
-      that.sequenceIdx = that.sequenceIdx + 1
-      // Stop at the end of the sequence
-      if (that.sequenceIdx >= that.sequence.length) {
-        Tone.Transport.stop()
-        that.sequenceIdx = 0
-      }
-    }, "4n")
-    Tone.start()
-    Tone.Transport.start()
-    
-    /*
-    const that = this
-    //Tone.Offline(({ transport, rawContext }) => {
-    Tone.Offline((offlineContext) => {
-      const transport = offlineContext.transport
-      for (const sampleId in that.sampler.samples) {
-        //that.sampler.samples[sampleId].player.connect(listener)
-        that.sampler.samples[sampleId].player.context = offlineContext
-      }
-      transport.scheduleRepeat((time) => {
-        that.sampler.play(that.sequence[that.sequenceIdx])
-        // that.sampler.playTime(that.sequence[that.sequenceIdx], time)
-        that.sequenceIdx = (that.sequenceIdx + 1) % that.sequence.length
-        if (!that.sequenceIdx) {
-          // stop recording
-          transport.stop()
-        }
-      }, "4n")
-      transport.start()
-    }, 4).then((buffer) => {
-      // do something with the output buffer
-      // console.log(buffer)
-      prepare_download(buffer, buffer.length)
-    })
-    */
-  }
-
   startInterval() {
     // If bpm is 0 then we're playing words sequentially
-    //if (bpm === 0) {
-    //  return this.play()
-    //}
+    if (Tone.Transport.bpm.value === 0) {
+      return this.play()
+    }
     const that = this
     this.sequenceIdx = 0
-    console.log(`Sequencing at ${Tone.Transport.bpm.value} every ${this.interval}`)
+    console.log(`Sequencing at ${Tone.Transport.bpm.value} every ${this.interval} with offset ${this.offset}`)
     Tone.Transport.scheduleRepeat((time) => {
       setTimeout(() => {
         that.sampler.play(that.sequence[that.sequenceIdx], () => {}, that.offset)
@@ -408,111 +497,3 @@ class MultiSequencer {
   }
 }
 
-
-class SequencerInterface {
-  constructor(sequencer, $parent) {
-      this.sequencer = sequencer
-      this.$parent = $parent
-      this.$sequencer = $("<div>") 
-      this.$parent.append(this.$sequencer)
-  }
-
-  addSample(obj) {
-      const sample = this.sequencer.addSample(obj.url, obj.id, obj.label)
-      const $ele = $("<span>").addClass('w').text(obj.label)
-      $ele.on('pitchChanged', function(e, by) {
-          sample.adjustPitch(by)
-      })
-      $ele.on('rateChanged', function(e, by) {
-          sample.adjustRate(by)
-      })
-      $ele.on('mousedown', function(e) {
-          $ele.toggleClass('selected')           
-      })
-      document.addEventListener('keyup', function(e) {
-          if (e.code == "ArrowUp") {
-              $('.w.selected').trigger("pitchChanged", 1)
-          } else if (e.code == "ArrowDown") {
-              $('.w.selected').trigger("pitchChanged", -1)
-          } else if (e.code == "ArrowLeft") {
-              $('.w.selected').trigger("rateChanged", 1.01)
-          } else if (e.code == "ArrowRight") {
-              $('.w.selected').trigger("rateChanged", .99)
-          }
-      })
-      this.$sequencer.append($ele)
-  }
-}
-
-function prepare_download(abuffer, total_samples) {  
-  const duration = abuffer.duration
-	const rate = abuffer.sampleRate
-	const offset = 0
-
-	const url = URL.createObjectURL(bufferToWave(abuffer, total_samples))
-  make_download(url)
-  $('#downloadLink').attr('href', url)
-  $('#downloadLink').attr('download', 'processed-words.wav')
-  $('#downloadLink').text('download')
-}
-
-function make_download(url) {  
-  $('#downloadLink').attr('href', url)
-  $('#downloadLink').attr('download', 'processed-words.wav')
-  $('#downloadLink').text('download')
-}
-
-// Convert an AudioBuffer to a Blob using WAVE representation
-function bufferToWave(abuffer, len) {
-  var numOfChan = abuffer.numberOfChannels,
-      length = len * numOfChan * 2 + 44,
-      buffer = new ArrayBuffer(length),
-      view = new DataView(buffer),
-      channels = [], i, sample,
-      offset = 0,
-      pos = 0;
-
-  // write WAVE header
-  setUint32(0x46464952);                         // "RIFF"
-  setUint32(length - 8);                         // file length - 8
-  setUint32(0x45564157);                         // "WAVE"
-
-  setUint32(0x20746d66);                         // "fmt " chunk
-  setUint32(16);                                 // length = 16
-  setUint16(1);                                  // PCM (uncompressed)
-  setUint16(numOfChan);
-  setUint32(abuffer.sampleRate);
-  setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-  setUint16(numOfChan * 2);                      // block-align
-  setUint16(16);                                 // 16-bit (hardcoded in this demo)
-
-  setUint32(0x61746164);                         // "data" - chunk
-  setUint32(length - pos - 4);                   // chunk length
-
-  // write interleaved data
-  for(i = 0; i < abuffer.numberOfChannels; i++)
-    channels.push(abuffer.getChannelData(i));
-
-  while(pos < length) {
-    for(i = 0; i < numOfChan; i++) {             // interleave channels
-      sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
-      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; // scale to 16-bit signed int
-      view.setInt16(pos, sample, true);          // write 16-bit sample
-      pos += 2;
-    }
-    offset++                                     // next source sample
-  }
-
-  // create Blob
-  return new Blob([buffer], {type: "audio/wav"});
-
-  function setUint16(data) {
-    view.setUint16(pos, data, true);
-    pos += 2;
-  }
-
-  function setUint32(data) {
-    view.setUint32(pos, data, true);
-    pos += 4;
-  }
-}

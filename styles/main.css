@@ -9,7 +9,8 @@ body {
   overflow-x: hidden;
 }
 
-#wordInfo table tr {
+#wordInfo table tr,
+#wordInfo .card__header {
   cursor: pointer;
 }
 
@@ -35,8 +36,41 @@ body {
   margin: 5px;
 }
 
-.stage .w.selected {
-    /* background-color: blueviolet; */
+#video-1 {
+  position: absolute;
+  left: 5%;
+  top: 5%;
+  width: 50%;
+  height: 50%;
+  /*background-color: brown;*/
+  z-Index: 10;
+}
+
+#video-2 {
+  position: absolute;
+  left: 45%;
+  top: 45%;
+  width: 50%;
+  height: 50%;
+  /*background-color: blue;*/
+  z-Index: 11;
+}
+
+#video-3 {
+  position: absolute;
+  left: 65%;
+  top: 15%;
+  width: 25%;
+  height: 25%;
+  /*background-color: green;*/
+  z-Index: 10;
+}
+
+#video-1.enabled, 
+#video-2.enabled, 
+#video-3.enabled {
+  background-color: black;
+  display: block;
 }
 
 .stage .w {
@@ -45,6 +79,10 @@ body {
 
 .stage .w.loaded {
   opacity: 1;
+}
+
+.stage .w.v-loaded {
+  border-bottom: 1px solid yellow;
 }
 
 

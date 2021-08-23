@@ -16,8 +16,8 @@ class Transcript {
 
     async loadReduct(id, onload) {
         const json = await (await fetch(`diarized_transcript.json?doc=${id}&phonemes=1`)).json()
-        console.log(json)
         this.segments = json.segments
+        console.log(this.segments.length)
         onload()
     }
 
@@ -67,7 +67,7 @@ class Transcript {
         }, parts, false)
     }
 
-    async loadAudio(sampler, docId, mediaId, start, end) {
+    async loadMedia(sampler, docId, mediaId, start, end, codec) {
         //console.log(start, end)
         //const segments = this.segments.filter(segment => (start >= segment.start && start< segment.end || end > segment.start && end <=segment.end))
         //if (segments.length > 1) {
@@ -76,7 +76,7 @@ class Transcript {
         //    const mediaId = segments[0].media_id
             let spec = []
             let curT = 0
-            //spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'video', opacity: [[0,1]]})
+            spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'video', opacity: [[0,1]]})
             spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'audio', volume: [[0,1]]})
             curT += end - start
             // const sampler = new Sampler()
@@ -92,7 +92,7 @@ class Transcript {
                     size: 240,
                     pre_padding: 0.05,
                     post_padding: 0,
-                    codec: 'wav'
+                    codec: codec
                     //ext: 'mp4'
                 })
             }, start+'-'+end, start+'-'+end)
@@ -112,6 +112,7 @@ class TranscriptInterface {
         this.$parent = $parent
         this.$transcript = $("<div>") 
         this.$parent.append(this.$transcript)
+        this.isActive = false
     }
 
     loadTranscript(id, url) {
@@ -129,12 +130,15 @@ class TranscriptInterface {
 
     makePhrase($words) {
         const end = $words[$words.length - 1].data('end')
-        const allWords = $words.map(x => x.data('word')).join('')
-        const phones = [].concat.apply([], $words.map(x => x.data('phones').map(p => p[0])))
+        const allWords = $words.map(x => x.text()).join('')
+        const allWords2 = $words.map(x => x.data('word')).join(' ')
+        // const phones = [].concat.apply([], $words.map(x => x.data('phones').map(p => p[0])))
+        const phones = [].concat.apply([], $words.map(x => x.data('phones').map(p => p)))
         $words[0].text(allWords)
-        $words[0].data('word', allWords)
+        $words[0].data('word', allWords2)
         $words[0].data('end', end)
         $words[0].data('phones', phones)
+        $words[0].data('pos', ['#Phrase'])
         for (let i=1; i<$words.length; i++) {
             $words[i].hide()
         }
@@ -142,6 +146,9 @@ class TranscriptInterface {
 
     // Filter, but a sequence of words must all match
     filter_sequence(filterFunc, targetLength) {
+        if (!this.isActive) {
+            return false
+        }
         // this.filter(filterFunc, leadingTrailing)
         const visibleWords = this.$transcript.find('.w:visible')
         let speed = Math.round(2000/visibleWords.length)+2
@@ -184,11 +191,17 @@ class TranscriptInterface {
     }
 
     trigger(event, params) {
+        if (!this.isActive) {
+            return false
+        }
         const visibleWords = this.$transcript.find('.w:visible')
         visibleWords.trigger(event, params)
     }
 
     filter(filterFunc, keep=1, leadingTrailing=[0,0]) {
+        if (!this.isActive) {
+            return false
+        }
         const visibleWords = this.$transcript.find('.w:visible')
         const speed = Math.round(2000/visibleWords.length)+2
         // const speed = 2
@@ -237,6 +250,9 @@ class TranscriptInterface {
     }
 
     sort(sortFunc) {
+        if (!this.isActive) {
+            return false
+        }
         this.$transcript.find('.w').sort((a, b) => sortFunc($(a),$(b)))
         .appendTo(this.$transcript)
     }
@@ -252,11 +268,23 @@ class TranscriptInterface {
         }
     }
 
+    loadVideoClips() {
+        const that = this
+        this.sequencer.useSampler('video')
+        $.each(this.$transcript.find('.w').not('.v-loaded'), function(index, item) {
+            const $w = $(item)
+            that.transcript.loadMedia(that.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), 'mp4').then(sample => {
+                sample.setElement($w)
+                $w.addClass('v-loaded')
+            })
+        })
+    }
+
     addRenderedWord($w) {
         const that = this
         this.$transcript.append($w).removeClass('selected')
         // const end = $w.data('start') + $w.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= 1) ? a + b: a )
-        this.transcript.loadAudio(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end')).then(sample => {
+        this.transcript.loadMedia(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), 'wav').then(sample => {
             //sample.on('starting', console.log('XXX STARTING XXX'));
             sample.setElement($w)
             $w.addClass('loaded')
@@ -280,6 +308,7 @@ class TranscriptInterface {
                 const $w = $("<span>").addClass('w').text(cleanWord).data({
                     start: lastEnd,
                     end: wd.start,
+                    start2: wd.start - segment.start,
                     word: cleanWord,
                     oWord: false,
                     phones: [],
@@ -288,10 +317,11 @@ class TranscriptInterface {
                     pos: ['Sound']
                 })
                 $w.on('mousedown', () => {
+                    that.$parent.trigger("wordSelected", [$w])
                     $w.toggleClass('selected')
                     //this.sequencer.sampler.play(wd.start +"-"+ wd.end)
-                    this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, $w.data('start'), $w.data('end'))
-                        .then(sample => { sample.play() })
+                    //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, $w.data('start'), $w.data('end'), 'wav')
+                    //    .then(sample => { sample.play() })
                 })
                 $parent.append($w)
             }
@@ -300,6 +330,7 @@ class TranscriptInterface {
             const $w = $("<span>").addClass('w').text(wd.word).data({
                 start: wd.start,
                 end: wd.end,
+                start2: wd.start - segment.start,
                 word: cleanWord,
                 oWord: wd.word,
                 phones: wd.phones,
@@ -317,7 +348,7 @@ class TranscriptInterface {
             $w.on('mousedown', () => {
                 that.$parent.trigger("wordSelected", [$w])
                 
-                // $w.toggleClass('selected')
+                $w.toggleClass('selected')
                 //this.sequencer.sampler.play(wd.start +"-"+ wd.end)
                 //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, wd.start, wd.end)
                 //    .then(sample => { sample.play() })
@@ -327,11 +358,16 @@ class TranscriptInterface {
         }
     }
 
-    render() {
-        for (let s of this.transcript.segments) {
+    async render() {
+        const renderSegment = (s) => {
             const $p = $("<p>")
             this.renderWords(s.wdlist, s, $p)
             this.$transcript.append($p)
+        }
+        for (const s of this.transcript.segments) {
+            setTimeout(() => {
+                renderSegment(s)
+            }, 20)
         }
     }
 
