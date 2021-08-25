@@ -135,6 +135,10 @@ class TranscriptInterface {
         this.$transcript = $("<div>") 
         this.$parent.append(this.$transcript)
         this.isActive = false
+        // on filters and sorts
+        this.$transcript.on("sequenceUpdated", () => {
+            this.getCurrentSequence(false)
+        })
     }
 
     loadTranscript(id, url) {
@@ -210,6 +214,7 @@ class TranscriptInterface {
         $.each(phrases, function (index, item) {
             that.makePhrase(item)
         })
+        this.$transcript.trigger("sequenceUpdated")
     }
 
     trigger(event, params) {
@@ -274,6 +279,7 @@ class TranscriptInterface {
         $.each(phrases, function (index, item) {
             that.makePhrase(item)
         })
+        this.$transcript.trigger("sequenceUpdated")
     }
 
     sort(sortFunc) {
@@ -282,6 +288,7 @@ class TranscriptInterface {
         }
         this.$transcript.find('.w').sort((a, b) => sortFunc($(a),$(b)))
         .appendTo(this.$transcript)
+        this.$transcript.trigger("sequenceUpdated")
     }
 
     getCurrentSequence(play) {
