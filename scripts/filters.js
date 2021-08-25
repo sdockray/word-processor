@@ -485,6 +485,7 @@ class WordInfoInterface {
         this.handleDuration(duration)
         this.handleLength(length)
         this.handlePhones(phones, $ele)
+        this.handleSyllables(sylls, syllDurs, $ele)
         this.handleTime($ele.data('start').toFixed(2), $ele.data('start2').toFixed(2))
         this.handlePos($ele.data('pos'))
         this.handleLetters(counts.join(', '))
@@ -706,6 +707,55 @@ class WordInfoInterface {
         })
     }
 
+    handleSyllables(sylls, syllDurs, $w) {
+        const stressedIdx = (a) => {
+            return (a.length) ? a.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0) : -1
+        }
+        this.$info.find('.info_syllables, .info_syllableLengths, .info_syllableSpeeds').on('click', () => {
+            this.openModal()
+            const $mEle = $('#filter-modal .modal-body .syllables')
+            const stressed = stressedIdx(syllDurs) + 1
+            $mEle.find('.num-syllables input').val(syllDurs.length)
+            $mEle.find('.stress input').val(stressed)
+            $mEle.show()
+            $mEle.find('.num-syllables button').on('click', () => {
+                const kind = $mEle.find('.num-syllables select').val()
+                const opt = parseInt($mEle.find('.num-syllables input').val())
+                this.history.filters.push(`words with ${kind} ${opt} syllables`)
+                this.words.filter((word) => {
+                    const sy = syllables(word.data('phones'))
+                    if (kind=="more than") {
+                        return sy.length > opt
+                    } else if (kind=="less than") {
+                        return sy.length < opt
+                    } else if (kind=="exactly") {
+                        return sy.length == opt
+                    }
+                }, true, [0, 0])
+            })
+            $mEle.find('.stress button').on('click', () => {
+                const kind = $mEle.find('.stress select').val()
+                const opt = parseInt($mEle.find('.stress input').val())
+                if (kind=='custom') {
+                    this.history.filters.push(`words with syllable ${opt} stressed`)
+                } else {
+                    this.history.filters.push(`words with ${kind} syllable stressed`)
+                }
+                this.words.filter((word) => {
+                    const sy = syllables(word.data('phones'))
+                    const syDurs = sy.map(s => s.map(p => p[1]).reduce((a, b) => a + b)).map(s => s.toFixed(2))
+                    const sIdx = stressedIdx(syDurs) + 1
+                    if (kind=="custom") {
+                        return sIdx == opt
+                    } else if (kind=="first") {
+                        return sIdx == 1
+                    } else if (kind=="last") {
+                        return syDurs.length && sIdx == syDurs.length
+                    }
+                }, true, [0, 0])
+            })
+        })
+    }
 
     handlePos(pos){
         this.$info.find('.info_pos').on('click', () => {

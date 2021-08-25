@@ -229,6 +229,29 @@ and 'webpack --watch' if you ever clone this repo -->
                         <button class="form-group-btn btn-primary btn-small all">all</button>
                     </div>
                 </div>
+                <div class="col-lg-6 syllables">
+                    <label>Syllables</label>
+                    <div class="form-group num-syllables">
+                        <label class="form-group-label label-small">number of syllables</label>
+                        <select class="select input-small form-group-input">
+                            <option value="less than">less than</option>
+                            <option value="more than">more than</option>
+                            <option value="exactly" selected>exactly</option>
+                        </select>
+                        <input class="input-small form-group-input" type="number" value="">
+                        <button class="form-group-btn btn-primary btn-small">keep</button>
+                    </div>
+                    <div class="form-group stress">
+                        <label class="form-group-label label-small">stressed syllable</label>
+                        <input class="input-small form-group-input" value="">
+                        <select class="select input-small form-group-input">
+                            <option value="first">first</option>
+                            <option value="last">last</option>
+                            <option value="custom" selected>at position</option>
+                        </select>
+                        <button class="form-group-btn btn-primary btn-small">keep</button>
+                    </div>
+                </div>
                 <div class="col-lg-6 pos">
                     <label>Parts of Speech</label>
                     <input class="input-small my-2" value="">
