@@ -67,41 +67,63 @@ class Transcript {
         }, parts, false)
     }
 
+    addMediaSpec(spec, curT, docId, mediaId, start, end) {
+        const dur = end - start
+        spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: dur, source_start: start, type: 'video', opacity: [[0,1]]})
+        spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: dur, source_start: start, type: 'audio', volume: [[0,1]]})
+        return dur
+    }
+
+    getMediaHeaders(spec, duration, codec) {
+        const pre_padding = 0.05
+        const post_padding = (codec=='wav') ? 0 : .05
+        return {
+            method: 'post',
+            headers: {
+                "X-Using-Reduct-Fetch": "true",
+            },
+            body: JSON.stringify({
+                org: orgId,
+                seq: spec,
+                duration: duration,
+                size: 240,
+                pre_padding: pre_padding,
+                post_padding: post_padding,
+                codec: codec
+            })
+        }
+    }
+
     async loadMedia(sampler, docId, mediaId, start, end, codec) {
-        //console.log(start, end)
-        //const segments = this.segments.filter(segment => (start >= segment.start && start< segment.end || end > segment.start && end <=segment.end))
-        //if (segments.length > 1) {
-        //    console.log("TODO: Handle a request spanning multiple segments")
-        //} else {
-        //    const mediaId = segments[0].media_id
             let spec = []
-            let curT = 0
-            spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'video', opacity: [[0,1]]})
-            spec.push({dbpath: ['doc', docId, 'media', mediaId, 'blob_name'], start: curT, duration: end-start, source_start: start, type: 'audio', volume: [[0,1]]})
-            curT += end - start
+            let curT = this.addMediaSpec(spec, 0, docId, mediaId, start, end)
+            let headers = this.getMediaHeaders(spec, curT, codec)
             // const sampler = new Sampler()
-            return sampler.addFetch('/render', {
-                method: 'post',
-                headers: {
-                    "X-Using-Reduct-Fetch": "true",
-                },
-                body: JSON.stringify({
-                    org: orgId,
-                    seq: spec,
-                    duration: curT,
-                    size: 240,
-                    pre_padding: 0.05,
-                    post_padding: 0,
-                    codec: codec
-                    //ext: 'mp4'
-                })
-            }, start+'-'+end, start+'-'+end)
+            return sampler.addFetch('/render', headers, start+'-'+end, start+'-'+end)
             //.then(sample => {
             //    sample.loop()
             //    sample.play()
             //})
         //}
     }
+
+    async downloadMedia(headers, codec) {
+        return fetch('/render', headers)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => {
+                const blob = new Blob([arrayBuffer], {type: "video/" + codec})
+                return URL.createObjectURL(blob)
+            })
+            .then(url => {
+                var a = document.createElement('a')
+                a.href = url
+                a.download = "download." + codec
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+            })
+            .catch(console.log)
+    }    
 }
 
 
@@ -203,7 +225,7 @@ class TranscriptInterface {
             return false
         }
         const visibleWords = this.$transcript.find('.w:visible')
-        const speed = Math.round(2000/visibleWords.length)+2
+        let speed = Math.round(2000/visibleWords.length)+2
         // const speed = 2
         const that = this
         let phrases = []
@@ -236,12 +258,17 @@ class TranscriptInterface {
                     //$(item).wrap('<del/>')
                 }, index*speed)
             } else {
-                setTimeout(() => {
+                if (index<200) {
+                    setTimeout(() => {
+                        $(item).removeClass('select')
+                        $(item).addClass('selected')
+                        //$(item).wrap('<mark/>')
+                        //that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
+                    }, index*speed)
+                } else {
                     $(item).removeClass('select')
                     $(item).addClass('selected')
-                    //$(item).wrap('<mark/>')
-                    //that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
-                }, index*speed)
+                }
             }
         })
         $.each(phrases, function (index, item) {
@@ -301,11 +328,31 @@ class TranscriptInterface {
         const pos = await cheap_nlp(wdlist.map(w => w.word).join(''))
         let idx = 0
         let lastEnd = segment.start
+        const makeWord = (opt) => {
+            const $w = $("<span>").addClass('w').text(opt.display).data({
+                start: opt.start,
+                end: opt.end,
+                start2: opt.start2,
+                word: opt.word,
+                oWord: opt.oWord,
+                phones: opt.phones,
+                mediaId: opt.mediaId,
+                docId: opt.docId,
+                pos: opt.pos
+            })
+            $w.on('mousedown', () => {
+                that.$parent.trigger("wordSelected", [$w])
+                $w.toggleClass('selected')
+            })
+            $parent.append($w)
+        }
         for (let wd of wdlist) {
             // console.log(wd)
+            // Add a sound if the gap is longer than a second
             if (wd.start > lastEnd + 1) {
                 const cleanWord = '['+ '.'.repeat(Math.round((wd.start - lastEnd)*3)) + ']'
-                const $w = $("<span>").addClass('w').text(cleanWord).data({
+                makeWord({
+                    display: cleanWord,
                     start: lastEnd,
                     end: wd.start,
                     start2: wd.start - segment.start,
@@ -316,18 +363,12 @@ class TranscriptInterface {
                     docId: this.transcript.docId,
                     pos: ['Sound']
                 })
-                $w.on('mousedown', () => {
-                    that.$parent.trigger("wordSelected", [$w])
-                    $w.toggleClass('selected')
-                    //this.sequencer.sampler.play(wd.start +"-"+ wd.end)
-                    //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, $w.data('start'), $w.data('end'), 'wav')
-                    //    .then(sample => { sample.play() })
-                })
-                $parent.append($w)
             }
+
             lastEnd = wd.end
             const cleanWord = wd.word.replace(regex, '').toLowerCase()
-            const $w = $("<span>").addClass('w').text(wd.word).data({
+            makeWord({
+                display: wd.word,
                 start: wd.start,
                 end: wd.end,
                 start2: wd.start - segment.start,
@@ -338,23 +379,11 @@ class TranscriptInterface {
                 docId: this.transcript.docId,
                 pos: (idx < pos.length && pos[idx].hasOwnProperty(cleanWord)) ? pos[idx][cleanWord] : []
             })
+            
             const lastLetter = wd.word.charAt(wd.word.length - 2)
             if (lastLetter=='.' || lastLetter=='?' || lastLetter=='!') {
                 idx += 1
             }
-            //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, wd.start, wd.end)
-            //this.transcript.loadLocalAudio(this.sequencer.sampler, wd.start, wd.end, "samples/" + this.transcript.docId)
-            
-            $w.on('mousedown', () => {
-                that.$parent.trigger("wordSelected", [$w])
-                
-                $w.toggleClass('selected')
-                //this.sequencer.sampler.play(wd.start +"-"+ wd.end)
-                //this.transcript.loadAudio(this.sequencer.sampler, this.transcript.docId, segment.media_id, wd.start, wd.end)
-                //    .then(sample => { sample.play() })
-            })
-            
-            $parent.append($w)
         }
     }
 
@@ -370,6 +399,38 @@ class TranscriptInterface {
             }, 20)
         }
     }
+
+    async download(bpm) {
+        const that = this
+        const codec = this.sequencer.sampler.preferredCodec
+        // this.sequencer.useSampler('video')
+        // @TODO: actually use the sequencer interval rather than just bpm
+        let spec = []
+        let curT = 0
+        if (bpm === 0) {
+            $.each(this.$transcript.find('.w:visible'), function(index, item) {
+                const $w = $(item)
+                curT += that.transcript.addMediaSpec(spec, curT, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'))
+                //that.transcript.formulateMediaRequest(that.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), codec)
+            })
+        } else {
+            const timeStep = 60/bpm
+            const offset = this.sequencer.offset/1000
+            curT = offset
+            $.each(this.$transcript.find('.w:visible'), function(index, item) {
+                const $w = $(item)
+                const wordDur = $w.data('end') - $w.data('start')
+                const clipDur = (wordDur<=timeStep) ? wordDur : timeStep
+                const nextStart = curT + timeStep
+                that.transcript.addMediaSpec(spec, curT, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('start')+clipDur)
+                curT = nextStart
+            })
+        }
+        const headers = this.transcript.getMediaHeaders(spec, curT, codec)
+        // now fetch!
+        await this.transcript.downloadMedia(headers, codec)
+    }
+
 
 }
 

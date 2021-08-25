@@ -35,7 +35,7 @@ function buildStage($parent, $video) {
     const $sorters = $('<div>')
     // const $interval = $('<input>').addClass('interval').attr('placeholder', '4n').val("4n")
     const intervals = ["1n", "2n", "4n", "8n", "16n"]
-    $interval = $('<select>').addClass('select input-xsmall form-group-input bg-gray-200')
+    const $interval = $('<select>').addClass('select input-xsmall form-group-input bg-gray-200')
     $.each(intervals, function (key, entry) {
         $interval.append($('<option></option>').attr('value', entry).text(entry))
     })
@@ -45,6 +45,9 @@ function buildStage($parent, $video) {
     })
     const $offset = $('<input>').addClass('offset form-group-input input-xsmall bg-gray-200').val("0")
     $offset.prop('type', 'number')
+    const $downloadButton = $("<button>").addClass("form-group-btn btn-xsmall bg-gray-500").html('&mapstodown;')
+    const $intervalLabel = $('<label>').addClass("form-group-label label-xsmall").text('interval')
+    const $offsetLabel = $('<label>').addClass("form-group-label label-xsmall").text('offset')
     const setIntervalOffset = (e) => {
         if(e.which === 13){
             //Disable textbox to prevent multiple submit
@@ -61,6 +64,9 @@ function buildStage($parent, $video) {
     $offset.on('keypress', function (e) {
         setIntervalOffset(e)
     })
+    $downloadButton.on('click', function(e) {
+        stage.download(parseInt($('#bpm').val()))
+    })
     //const stageFilters = new FilterInterface($filters, stage)
     //const stageSorters = new SorterInterface($sorters, stage)
     const thisWordInfo = new WordInfoInterface($('#wordInfo'), stage)
@@ -73,9 +79,12 @@ function buildStage($parent, $video) {
         setActiveInterface(stage)
         thisWordInfo.setActiveWord($w)
     })
-    $intervalLabel = $('<label>').addClass("form-group-label label-xsmall").text('interval')
-    $offsetLabel = $('<label>').addClass("form-group-label label-xsmall").text('offset')
-    $intervalOffsetContainer = $('<div>').addClass('form-group').append($intervalLabel).append($interval).append($offsetLabel).append($offset)
+    $intervalOffsetContainer = $('<div>').addClass('form-group')
+        .append($downloadButton)
+        .append($intervalLabel)
+        .append($interval)
+        .append($offsetLabel)
+        .append($offset)
     //$stageContainer.append($filters).append($sorters).append($stage).append($intervalOffsetContainer)
     $stageContainer.append($title).append($stage).append($intervalOffsetContainer)
     $parent.append($stageContainer)
@@ -172,15 +181,15 @@ async function start() {
     // expand and contract stage
     $('#expandButton').on('click', () => {
         if ($('#leftSide').hasClass('col-2')) {
+            $('body').addClass('expanded')
             $('#middleSide').hide()
             $('#leftSide').removeClass('col-2')
             $('#leftSide').addClass('col-10')
-            $('#enableVideo').removeClass('u-none')
         } else {
+            $('body').removeClass('expanded')
             $('#middleSide').show()
             $('#leftSide').removeClass('col-10')
             $('#leftSide').addClass('col-2')
-            $('#enableVideo').addClass('u-none')
             $('#video-1').hide()
             $('#video-2').hide()
             $('#video-3').hide()

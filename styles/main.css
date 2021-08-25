@@ -36,6 +36,23 @@ body {
   margin: 5px;
 }
 
+body.expanded #enableVideo {
+  display: block;
+}
+
+body #enableVideo {
+  display: none;
+}
+
+body.expanded #stages .stage .form-group button {
+  display: block;
+}
+
+body #stages .stage .form-group button {
+  display: none;
+}
+
+
 #video-1 {
   position: absolute;
   left: 5%;

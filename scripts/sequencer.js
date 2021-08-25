@@ -239,6 +239,7 @@ class Sampler {
 class AudioSampler extends Sampler {
   constructor() {
     super()
+    this.preferredCodec = 'wav'
   }
 
   addSample(url, idx, label) {
@@ -284,6 +285,7 @@ class AudioSampler extends Sampler {
 class VideoSampler extends Sampler {
   constructor() {
     super()
+    this.preferredCodec = 'mp4'
     this.player = false
   }
 
