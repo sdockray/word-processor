@@ -424,7 +424,15 @@ class WordInfoInterface {
         return [...str].reduce((res, char) => (res[char] = (res[char] || 0) + 1, res), {})
     }
 
+    getLeadingTrailing() {
+        const $mEle = $('#filter-modal .modal-footer .leading-trailing')
+        const before = parseInt($mEle.find('input.before').val())
+        const after = parseInt($mEle.find('input.after').val())
+        return [before, after]
+    }
+
     hideFields(names) {
+        this.$info.find('#makePhrase').hide()
         this.$info.find('table tbody tr').show()
         for (const name of names) {
             this.$info.find(name).hide()
@@ -432,6 +440,10 @@ class WordInfoInterface {
     }
 
     setActivePhrase(phrase) {
+        if (phrase.length==1) {
+            return this.setActiveWord(phrase[0])
+        }
+        const that = this
         let pattern = []
         let words = []
         let pos = ''
@@ -441,6 +453,15 @@ class WordInfoInterface {
             pos += `<b>${$ele.data('word')}</b><br/>${$ele.data('pos').join(', ')}<br/>`
         }
         this.hideFields(['.info_length', '.info_duration', '.info_time', '.info_time2', '.info_syllables', '.info_syllableLengths', '.info_syllableSpeed', '.info_phones', '.info_phoneList', '.info_phoneSpeed', '.info_letters'])
+        this.$info.find('#makePhrase').show()
+        console.log('here')
+        $('#makePhrase').one('click', debounce(() => {
+            if (!phrase[0].hasClass('p')) { 
+                that.words.makePhrase(phrase)
+            }
+            phrase[0].addClass('p')
+            this.setActiveWord(phrase[0])
+        }))
         this.$info.find('.card__header > p').text(words.join(' '))
         this.$info.find('.info_pos > td').show().html(pos)
         this.handlePos(pattern.join(' '))
@@ -492,24 +513,50 @@ class WordInfoInterface {
     }
 
     handleWord(word) {
+        const stemmed = (patterns, word) => {
+            for (const pattern of patterns) {
+                if (pattern.startsWith('-') && word.endsWith(pattern.substring(1))) {
+                    return true
+                } else if (pattern.endsWith('-') && word.startsWith(pattern.slice(0,-1))) {
+                    return true
+                } 
+            }
+            return false
+        }
         this.$info.find('.card__header').on('click', () => {
             this.openModal()
             const $mEle = $('#filter-modal .modal-body .word')
             $mEle.show()
-            $mEle.find('input').val(word)
+            $mEle.find('input.find-word').val(word)
             $mEle.find('button.keep').on('click', () => {
-                const opt = $mEle.find('input').val().split(',').map(p => p.trim())
+                const opt = $mEle.find('input.find-word').val().split(',').map(p => p.trim())
                 this.history.filters.push(`including ${$mEle.find('input').val()}`)
                 this.words.filter((word) => {
-                    return opt.includes(word.data('word'))
-                }, true, [0, 0])
+                    return opt.includes(word.data('word')) || stemmed(opt, word.data('word'))
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.remove').on('click', () => {
-                const opt = $mEle.find('input').val().split(',').map(p => p.trim())
+                const opt = $mEle.find('input.find-word').val().split(',').map(p => p.trim())
                 this.history.filters.push(`with ${$mEle.find('input').val()} removed`)
                 this.words.filter((word) => {
-                    return opt.includes(word.data('word'))
-                }, false, [0, 0])
+                    return opt.includes(word.data('word')) || stemmed(opt, word.data('word'))
+                }, false, this.getLeadingTrailing())
+            })
+            $mEle.find('button.keep-common').on('click', () => {
+                const opt = $mEle.find('input.common-words').val()
+                this.history.filters.push(`keeping ${opt} most common words`)
+                const words = this.words.commonWords(parseInt(opt))
+                this.words.filter((word) => {
+                    return words.includes(word.data('word'))
+                }, true, this.getLeadingTrailing())
+            })
+            $mEle.find('button.remove-common').on('click', () => {
+                const opt = $mEle.find('input.common-words').val()
+                this.history.filters.push(`removing  ${opt} most common words`)
+                const words = this.words.commonWords(parseInt(opt))
+                this.words.filter((word) => {
+                    return words.includes(word.data('word'))
+                }, false, this.getLeadingTrailing())
             })
             $mEle.find('button.alpha').on('click', () => {
                 this.history.sort.push(`sorted alphabetically`)
@@ -538,28 +585,28 @@ class WordInfoInterface {
                 this.history.filters.push(`before ${$mEle.find('input').val()}`)
                 this.words.filter((word) => {
                     return word.data('start') <= parseFloat(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('.global button.after').on('click', () => {
                 const opt = $mEle.find('.global input').val()
                 this.history.filters.push(`after ${$mEle.find('input').val()}`)
                 this.words.filter((word) => {
                     return word.data('start') >= parseFloat(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('.local button.before').on('click', () => {
                 const opt = $mEle.find('.local input').val()
                 this.history.filters.push(`before ${$mEle.find('input').val()} in each sentence`)
                 this.words.filter((word) => {
                     return word.data('start2') <= parseFloat(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('.local button.after').on('click', () => {
                 const opt = $mEle.find('.local input').val()
                 this.history.filters.push(`after ${$mEle.find('input').val()} in each sentence`)
                 this.words.filter((word) => {
                     return word.data('start2') >= parseFloat(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.chron').on('click', () => {
                 this.history.sort.push(`sorted by original time`)
@@ -599,14 +646,14 @@ class WordInfoInterface {
                 this.history.filters.push(`words shorter than ${$mEle.find('input').val()}s`)
                 this.words.filter((word) => {
                     return word.data('end') - word.data('start') <= parseFloat(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.longer').on('click', () => {
                 const opt = $mEle.find('input').val()
                 this.history.filters.push(`words longer than ${$mEle.find('input').val()}s`)
                 this.words.filter((word) => {
                     return word.data('end') - word.data('start') >= parseFloat(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.within').on('click', () => {
                 const opt = $mEle.find('input').val()
@@ -614,7 +661,7 @@ class WordInfoInterface {
                 this.words.filter((word) => {
                     const d = word.data('end') - word.data('start')
                     return d >= parseFloat(opt) - 0.05 && d <= parseFloat(opt) + 0.05   
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.short-to-long').on('click', () => {
                 this.history.sort.push(`shorter to longer duration words`)
@@ -646,21 +693,21 @@ class WordInfoInterface {
                 this.history.filters.push(`words shorter than ${$mEle.find('input').val()} letters`)
                 this.words.filter((word) => {
                     return !word.data('pos').includes('Sound') && word.data('word').length <= parseInt(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.longer').on('click', () => {
                 const opt = $mEle.find('input').val()
                 this.history.filters.push(`words longer than ${$mEle.find('input').val()} letters`)
                 this.words.filter((word) => {
                     return !word.data('pos').includes('Sound') && word.data('word').length >= parseInt(opt)
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.within').on('click', () => {
                 const opt = $mEle.find('input').val()
                 this.history.filters.push(`${$mEle.find('input').val()} letter words`)
                 this.words.filter((word) => {
                     return !word.data('pos').includes('Sound') && word.data('word').length == parseInt(opt)   
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('button.short-to-long').on('click', () => {
                 this.history.sort.push(`short to long words`)
@@ -696,7 +743,7 @@ class WordInfoInterface {
                     } else if (kind=="anywhere") {
                         return phones.includes(opt)
                     }
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('.extract button.this').on('click', () => {
                 $w.trigger('focusPhones', [$mEle.find('.extract select').val(), $mEle.find('.extract input').val()])
@@ -731,7 +778,7 @@ class WordInfoInterface {
                     } else if (kind=="exactly") {
                         return sy.length == opt
                     }
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
             $mEle.find('.stress button').on('click', () => {
                 const kind = $mEle.find('.stress select').val()
@@ -752,8 +799,20 @@ class WordInfoInterface {
                     } else if (kind=="last") {
                         return syDurs.length && sIdx == syDurs.length
                     }
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
+            $mEle.find('button.slow-to-fast').on('click', () => {
+                this.history.sort.push(`slow to fast words`)
+                this.words.sort((a, b) => {
+                    return syllables(a.data('phones')).length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) > syllables(b.data('phones')).length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
+                })
+            })
+            $mEle.find('button.fast-to-slow').on('click', () => {
+                this.history.sort.push(`fast to slow words`)
+                this.words.sort((a, b) => {
+                    return syllables(a.data('phones')).length/(parseFloat(a.data('end')) - parseFloat(a.data('start'))) < syllables(b.data('phones')).length/(parseFloat(b.data('end')) - parseFloat(b.data('start')))
+                })
+            })        
         })
     }
 
@@ -773,11 +832,11 @@ class WordInfoInterface {
                     if (pattern[0].includes('+')) {
                         this.words.filter((word) => {
                             return pattern[0].split('+').every(r=> word.data('pos').includes(r.substring(1)))
-                        }, keep, [0, 0])
+                        }, keep, this.getLeadingTrailing())
                     } else {
                         this.words.filter((word) => {
                             return pattern[0].split(',').some(r=> word.data('pos').includes(r.substring(1)))
-                        }, keep, [0, 0])
+                        }, keep, this.getLeadingTrailing())
                     }
                 } else {
                     this.words.filter_sequence((word, idx) => {
@@ -815,7 +874,7 @@ class WordInfoInterface {
                 this.words.filter((word) => {
                     const letters = this.getLettersCount(word.data('word'))
                     return opt.every(r=> letters.hasOwnProperty(r[0]) && letters[r[0]] >= r[1])
-                }, true, [0, 0])
+                }, true, this.getLeadingTrailing())
             })
         })
     }        

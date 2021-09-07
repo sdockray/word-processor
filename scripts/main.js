@@ -3,6 +3,19 @@ let transcriptInterface = null
 const spirit = new MultiSequencer()
 const orgId = 'bdee032746'
 
+function debounce(func, limit = 300){
+    var wait = false;                  // Initially, we're not waiting
+    return function () {               // We return a throttled function
+        if (!wait) {                   // If we're not waiting
+            func.call();           // Execute users function
+            wait = true;               // Prevent future invocations
+            setTimeout(function () {   // After a period of time
+                wait = false;          // And allow future invocations
+            }, limit);
+        }
+    }
+}
+
 async function loadTranscriptList() {
     return $.getJSON( "/userdb").then( data => {
         let transcriptData = {}
@@ -35,7 +48,7 @@ function buildStage($parent, $video) {
     const $sorters = $('<div>')
     // const $interval = $('<input>').addClass('interval').attr('placeholder', '4n').val("4n")
     const intervals = ["1n", "2n", "4n", "8n", "16n"]
-    const $interval = $('<select>').addClass('select input-xsmall form-group-input bg-gray-200')
+    const $interval = $('<select>').addClass('select input-xsmall form-group-input bg-gray-200 interval')
     $.each(intervals, function (key, entry) {
         $interval.append($('<option></option>').attr('value', entry).text(entry))
     })
@@ -45,9 +58,15 @@ function buildStage($parent, $video) {
     })
     const $offset = $('<input>').addClass('offset form-group-input input-xsmall bg-gray-200').val("0")
     $offset.prop('type', 'number')
-    const $downloadButton = $("<button>").addClass("form-group-btn btn-xsmall bg-gray-500").html('&mapstodown;')
-    const $intervalLabel = $('<label>').addClass("form-group-label label-xsmall").text('interval')
-    const $offsetLabel = $('<label>').addClass("form-group-label label-xsmall").text('offset')
+    const $downloadButton = $("<button>").addClass("tooltip tooltip--top--right form-group-btn btn-xsmall bg-gray-500").text('dl')
+    $downloadButton.prop('data-tooltip', 'Download this track (buggy)')
+    const $intervalLabel = $('<label>').addClass("tooltip form-group-label label-xsmall").text('interval')
+    $intervalLabel.prop('data-tooltip', '4n is on the wpm beat')
+    const $offsetLabel = $('<label>').addClass("tooltip form-group-label label-xsmall").text('offset')
+    $offsetLabel.prop('data-tooltip', 'In milliseconds')
+    const $volumeLabel = $('<label>').addClass("form-group-label label-xsmall volume").text('volume')
+    const $volume = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 volume').val("10")
+    $volume.prop('type', 'number')
     const setIntervalOffset = (e) => {
         if(e.which === 13){
             //Disable textbox to prevent multiple submit
@@ -63,6 +82,13 @@ function buildStage($parent, $video) {
     })
     $offset.on('keypress', function (e) {
         setIntervalOffset(e)
+    })
+    $volume.on('keypress', function (e) {
+        if(e.which === 13){
+            $volume.attr("disabled", "disabled")
+            stage.sequencer.setVolume(parseInt($volume.val()))
+            $volume.removeAttr("disabled")
+        }
     })
     $downloadButton.on('click', function(e) {
         stage.download(parseInt($('#bpm').val()))
@@ -81,6 +107,8 @@ function buildStage($parent, $video) {
     })
     $intervalOffsetContainer = $('<div>').addClass('form-group')
         .append($downloadButton)
+        .append($volumeLabel)
+        .append($volume)
         .append($intervalLabel)
         .append($interval)
         .append($offsetLabel)
@@ -99,7 +127,11 @@ async function start() {
     loadTranscriptList().then(transcriptData => {
         $.each(transcriptData, function (key, entry) {
             dropdown.append($('<option></option>').attr('value', key).text(entry))
-        })    
+        })
+        const v = dropdown.find('option:contains(Word Processor Demo)').val()
+        if (v) {
+            dropdown.val(v).trigger('change')
+        }
     })
     transcriptInterface = new TranscriptInterface($("#transcript"))
     const transcriptFilters = new FilterInterface($('#transcriptFilters'), transcriptInterface)
@@ -108,6 +140,7 @@ async function start() {
     $("#transcript").on('wordSelected', (event, $w) => {
         setActiveInterface(transcriptInterface)
         wordInfo.setActiveWord($w)
+        //transcriptInterface.playTranscriptSegment($w.parent(), $w)
     })
     transcriptFilters.hide()
     transcriptSorters.hide()
@@ -130,10 +163,15 @@ async function start() {
             })
             selectAllMode = !selectAllMode
         })
+        $('#reload').on('click', () => {
+            transcriptInterface.reloadTranscript()
+        })
         //
         $('#sendButton').show()
         $('#stageChooser').show()
+        $('#reload').show()
         $('#sendButton').on('click', () => {
+            $('#playControls').show()
             const stage = stages[parseInt($('#stageChooser').val())]
             stage.$parent.parent().show()
             $('#video-'+parseInt($('#stageChooser').val())).removeClass('enabled')
@@ -151,7 +189,9 @@ async function start() {
         transcriptSorters.show()
     })
     // set up buttons
+    $('#playControls').hide()
     $('#selectAllButton').hide()
+    $('#reload').hide()
     $('#sendButton').hide()
     $('#stageChooser').hide()
     // set up stage
@@ -169,6 +209,7 @@ async function start() {
         })
         spirit.playOnBeat()
     })
+    // enable video
     $('#enableVideo').on('click', () => {
         console.log('enabling video')
         $.each(stages, function (key, stage) {
@@ -177,6 +218,39 @@ async function start() {
         $('#video-1').show()
         $('#video-2').show()
         $('#video-3').show()
+    })
+    // download sequencer
+    $('#downloadSequencers').on('click', () => {
+        spirit.export()
+    })
+    $('#loadComposition').on('change', () => {
+        //spirit.export()
+        const file = $('#loadComposition').prop('files')[0]
+        const reader = new FileReader()
+        reader.addEventListener('load', (e) => {
+            const data = JSON.parse(e.target.result)
+            $('#playControls').show()
+            //spirit.load(data)
+            $('#bpm').val(data.bpm)
+            for (const [seqId, seq] of data.sequencers.entries()) {
+                const stage = stages[seqId]
+                if (Object.keys(seq.samples).length) {
+                    stage.$parent.parent().show()
+                    $('#video-'+seqId).removeClass('enabled')
+                    $('#video-'+seqId).addClass('enabled')
+                    for (const samId of seq.sequence) {
+                        const d = seq.samples[samId]
+                        const $w = stage.makeWord(d).off()
+                        stage.addRenderedWord($w)
+                    }
+                    stage.sequencer.load(seq)
+                    stage.$parent.parent().find('.form-group input.volume').val(seq.volume)
+                    stage.$parent.parent().find('.form-group select.interval').val(seq.interval)
+                    stage.$parent.parent().find('.form-group input.offset').val(seq.offset)
+                }
+            }
+        })
+        reader.readAsText(file)
     })
     // expand and contract stage
     $('#expandButton').on('click', () => {

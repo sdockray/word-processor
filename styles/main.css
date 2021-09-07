@@ -2,6 +2,19 @@ body {
   height: 100%;
 }
 
+::selection,
+#transcript .w.selected {
+  background-color: yellow;
+  color: black;
+}
+
+
+h6.label {
+  position: absolute;
+  top:0px;
+  text-align: center;
+}
+
 #transcript {
   background-color: white;
   color: black;
@@ -18,9 +31,8 @@ body {
   width: 80px;
 }
 
-#transcript .w.selected {
-    background-color: yellow;
-    color: black;
+#transcript .w.ph {
+  border-bottom: 1px dashed gray;
 }
 
 #stages .stage .words {
@@ -36,11 +48,15 @@ body {
   margin: 5px;
 }
 
-body.expanded #enableVideo {
+body.expanded #enableVideo,
+body.expanded #uploadSequencers,
+body.expanded #downloadSequencers {
   display: block;
 }
 
-body #enableVideo {
+body #enableVideo,
+body #uploadSequencers,
+body #downloadSequencers {
   display: none;
 }
 
@@ -107,3 +123,24 @@ body #stages .stage .form-group button {
   width:30px;
 }
 
+#sendButton,
+#selectAllButton,
+#enableVideo,
+#reload
+ {
+  z-index:5;
+}
+
+.hiddenFileInput > input{
+  height: 100%;
+  width: 100;
+  opacity: 0;
+  cursor: pointer;
+}
+.hiddenFileInput{
+  border: 1px solid #ccc;
+  width: 100px;
+  height: 100px;
+  display: inline-block;
+  overflow: hidden;
+  cursor: pointer;

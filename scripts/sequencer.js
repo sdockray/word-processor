@@ -13,6 +13,7 @@ class AudioSample {
     
     this.label = "..."
     this.pitchShifter = false
+    this.volume = 10
     this.start = -1
     this.duration = -1
     this.$ele = false
@@ -53,6 +54,10 @@ class AudioSample {
     this.label = label
   }
 
+  setVolume(volume) {
+    this.volume = volume
+  }
+
   loop(stop) {
     this.player.loop = !stop
   }
@@ -71,7 +76,7 @@ class AudioSample {
       return
     }
     //this.emit('starting')
-    this.player.volume.value = 20
+    this.player.volume.value = this.volume
     if (this.start>=0 && this.duration>=0) {
       this.player.start("0.05", this.start + .05, this.duration)
       //this.player.start(0, this.start, this.duration)
@@ -152,6 +157,10 @@ class VideoSample {
     this.label = label
   }
 
+  setVolume(volume) {
+    // nop. can't set volume on videos
+  }
+
   loop(stop) {
     this.loop = !stop
   }
@@ -192,6 +201,7 @@ class VideoSample {
 class Sampler {
   constructor() {
     this.samples = {}
+    this.volume = 10
     this.play = this.play.bind(this)
   }
 
@@ -231,6 +241,24 @@ class Sampler {
     if (this.samples.hasOwnProperty(idx)) {
       this.samples[idx].clearCallback()
     }
+  }
+
+  setVolume(volume) {
+    console.log('setting volume to:', volume)
+    this.volume = volume
+    for (const idx in this.samples) {
+      this.samples[idx].setVolume(volume)
+    }
+  }
+
+  export() {
+    let data = {}
+    for (const idx in this.samples) {
+      const $ele = this.samples[idx].$ele
+      data[idx] = $ele.data()
+      data[idx].display = $ele.text()
+    }
+    return data
   }
 
 }
@@ -421,6 +449,10 @@ class Sequencer {
     this.offset = parseFloat(offset)
   }
 
+  setVolume(volume) {
+    this.sampler.setVolume(volume)
+  }
+
   playOnBeat(bpm=180, interval="1i") {
     // If bpm is 0 then we're playing words sequentially
     if (bpm === 0) {
@@ -464,7 +496,21 @@ class Sequencer {
     }
   }
 
-  // TODO: bpm sequencing
+  load(data) {
+    this.setInterval(data.interval, data.offset)
+    this.setVolume(data.volume) 
+  }
+
+  export() {
+    return {
+      interval: this.interval,
+      offset: this.offset,
+      volume: this.sampler.volume,
+      sequence: this.sequence,
+      samples: this.sampler.export()
+    }   
+  }
+
 }
 
 
@@ -484,6 +530,7 @@ class MultiSequencer {
       Tone.Transport.cancel()
       return
     }
+    console.log(this.sequencers)
     for (const s of this.sequencers) {
       s.startInterval()
     }
@@ -497,5 +544,27 @@ class MultiSequencer {
       Tone.Transport.bpm.value = bpm
     }
   }
-}
 
+  load(data) {
+    this.updateBPM(data.bpm)
+  }
+
+  // export for saving
+  export() {
+    let data = {
+      bpm: Tone.Transport.bpm.value,
+      sequencers: []
+    }
+    for (const s of this.sequencers) {
+      data.sequencers.push(s.export())
+    }
+    // console.log(data)
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data))
+    let a = document.createElement('a')
+    a.href = dataStr
+    a.download = "processed-words.json"
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  }
+}

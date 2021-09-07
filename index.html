@@ -18,7 +18,7 @@ and 'webpack --watch' if you ever clone this repo -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 
     <link rel="shortcut icon" href="ml.gif" type="image/gif">
-    <title>sequencer</title>
+    <title>word processor</title>
 
 </head>
 <body class="bg-yellow-300">
@@ -31,12 +31,18 @@ and 'webpack --watch' if you ever clone this repo -->
         <div>
             <div class="row">
                 <div class="col-2" id="leftSide">
+                    <h6 class="label">PLAYER</h6>
                     <div class="input-control my-2">
+                        <label for="loadComposition">
+                            <span>load a saved composition</span>
+                            <input type="file" id="loadComposition" style="display:none">
+                        </span>
                         <div id="playControls" class="form-group">
                             <button id="playButton" class="form-group-btn btn-primary btn-small bg-gray-700">&#9658;</button>
                             <input id="bpm" class="form-group-input input-small" type="number" step="1" value="60">
                             <label class="form-group-label label-small">wpm</label>
-                            <button id="enableVideo" class="form-group-btn btn-primary btn-small bg-black"></button>
+                            <button id="enableVideo" class="tooltip tooltip--left form-group-btn btn-primary btn-small bg-black" data-tooltip="enable video mode (and wait)">v</button>
+                            <button id="downloadSequencers" class="tooltip tooltip--left form-group-btn btn-info btn-small bg-black" data-tooltip="save this composition">dl</button>
                             <button id="expandButton" class="form-group-btn btn-primary btn-small bg-gray-700">&harr;</button>
                         </div>
                     </div>
@@ -44,13 +50,15 @@ and 'webpack --watch' if you ever clone this repo -->
                     <div id="stages">
                     </div>
                 </div>
-                <div class="col-8 content" id="middleSide">
+                <div class="col-8 " id="middleSide">
+                    <h6 class="label">TRANSCRIPT</h6>
                     <div class="input-control">
                         <div class="form-group">
                             <select id="transcriptChooser" class="select input-small form-group-input text-indigo-500 bg-gray-000" placeholder="load a transcript"></select>
-                            <button id="selectAllButton" class="form-group-btn btn-primary btn-small bg-gray-700">&sext;</button>
+                            <button id="reload" class="tooltip tooltip--bottom form-group-btn btn-primary btn-small bg-green-600" data-tooltip="reload transcript">&#x21bb;</button>
+                            <button id="selectAllButton" class="tooltip tooltip--bottom form-group-btn btn-primary btn-small bg-gray-700" data-tooltip="(un)select everything">&sext;</button>
                             <select id="stageChooser" class="select input-small form-group-input text-gray-000 bg-purple-500"></select>
-                            <button id="sendButton" class="form-group-btn btn-primary btn-small bg-purple-500">&#9986;</button>
+                            <button id="sendButton" class="tooltip tooltip--left form-group-btn btn-primary btn-small bg-purple-500" data-tooltip="send selections to player">&#9986;</button>
                         </div>
                     </div>
                     <div class="card">
@@ -58,9 +66,11 @@ and 'webpack --watch' if you ever clone this repo -->
                     </div>
                 </div>
                 <div class="col-2" id="rightSide">
+                    <h6 class="label">FILTER/SORT</h6>
                     <div class="card bg-pink-200 u-none" id="wordInfo">
                         <small>
                         <div class="card__header"><p class="px-3"></p></div>
+                        <button id="makePhrase" class="mx-2 btn-primary btn-xsmall bg-purple-600">make phrase</button>
                         <div class="content pt-3">
                             <table class="table small px-3">
                                 <tbody>
@@ -141,10 +151,15 @@ and 'webpack --watch' if you ever clone this repo -->
             <div class="modal-body content">
                 <div class="col-lg-6 word">
                     <label>Word</label>
-                    <input class="input-xsmall my-2" value="">
-                    <span class="info">for multiple words, separate with commas</span>
+                    <input class="input-xsmall my-2 find-word" value="">
+                    <span class="info">for multiple words, separate with commas.<br/>use a hyphen to match parts of words (eg. commun-)</span>
                     <button class="btn-success btn-xsmall keep">keep</button>
                     <button class="btn-success btn-xsmall remove">remove</button>
+                    <div class="divider"></div>
+                    <input class="input-xsmall my-2 common-words" type="number" value="5">
+                    <span class="info">the most common N words</span>
+                    <button class="btn-success btn-xsmall keep-common">keep</button>
+                    <button class="btn-success btn-xsmall remove-common">remove</button>
                     <div class="divider"></div>
                     <button class="btn-info btn-xsmall alpha">sort A-Z</button>
                     <button class="btn-info btn-xsmall r-alpha">sort Z-A</button>
@@ -212,7 +227,7 @@ and 'webpack --watch' if you ever clone this repo -->
                         <select class="select input-small form-group-input">
                             <option value="start">at start</option>
                             <option value="end">at end</option>
-                            <option value="any">anywhere</option>
+                            <option value="anywhere">anywhere</option>
                         </select>
                         <button class="form-group-btn btn-primary btn-small">keep</button>
                     </div>
@@ -251,6 +266,9 @@ and 'webpack --watch' if you ever clone this repo -->
                         </select>
                         <button class="form-group-btn btn-primary btn-small">keep</button>
                     </div>
+                    <div class="divider"></div>
+                    <button class="btn-info btn-xsmall fast-to-slow">sort fast to slow</button>
+                    <button class="btn-info btn-xsmall slow-to-fast">sort slow to fast</button>
                 </div>
                 <div class="col-lg-6 pos">
                     <label>Parts of Speech</label>
@@ -268,6 +286,15 @@ and 'webpack --watch' if you ever clone this repo -->
                     <input class="input-small my-2" value="">
                     <button class="btn-success btn-small keep">keep</button>
                     <span class="info">Words with at least this many of each letter</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small>include any words before and after?</small>
+                <div class="form-group leading-trailing">
+                    <label class="form-group-label label-small">before</label>
+                    <input class="input-small form-group-input before" type="number" value="0">
+                    <label class="form-group-label label-small">after</label>
+                    <input class="input-small form-group-input after" type="number" value="0">
                 </div>
             </div>
         </div>
