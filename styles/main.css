@@ -118,11 +118,6 @@ body #stages .stage .form-group button {
   border-bottom: 1px solid yellow;
 }
 
-
-.stage .interval, .stage .offset {
-  width:30px;
-}
-
 #sendButton,
 #selectAllButton,
 #enableVideo,

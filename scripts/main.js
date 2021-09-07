@@ -67,6 +67,8 @@ function buildStage($parent, $video) {
     const $volumeLabel = $('<label>').addClass("form-group-label label-xsmall volume").text('volume')
     const $volume = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 volume').val("10")
     $volume.prop('type', 'number')
+    const $loopButton = $("<button>").addClass("form-group-btn btn-xsmall bg-green-500").html('loop')
+    
     const setIntervalOffset = (e) => {
         if(e.which === 13){
             //Disable textbox to prevent multiple submit
@@ -93,6 +95,17 @@ function buildStage($parent, $video) {
     $downloadButton.on('click', function(e) {
         stage.download(parseInt($('#bpm').val()))
     })
+    $loopButton.on('click', function(e) {
+        if (stage.sequencer.looping) {
+            stage.sequencer.looping = false
+            $loopButton.removeClass('bg-green-500')
+            $loopButton.addClass('bg-gray-100')
+        } else {
+            stage.sequencer.looping = true
+            $loopButton.addClass('bg-green-500')
+            $loopButton.removeClass('bg-gray-100')
+        }
+    })
     //const stageFilters = new FilterInterface($filters, stage)
     //const stageSorters = new SorterInterface($sorters, stage)
     const thisWordInfo = new WordInfoInterface($('#wordInfo'), stage)
@@ -113,6 +126,7 @@ function buildStage($parent, $video) {
         .append($interval)
         .append($offsetLabel)
         .append($offset)
+        .append($loopButton)
     //$stageContainer.append($filters).append($sorters).append($stage).append($intervalOffsetContainer)
     $stageContainer.append($title).append($stage).append($intervalOffsetContainer)
     $parent.append($stageContainer)
@@ -134,16 +148,12 @@ async function start() {
         }
     })
     transcriptInterface = new TranscriptInterface($("#transcript"))
-    const transcriptFilters = new FilterInterface($('#transcriptFilters'), transcriptInterface)
-    const transcriptSorters = new SorterInterface($('#transcriptSorters'), transcriptInterface)
     const wordInfo = new WordInfoInterface($('#wordInfo'), transcriptInterface)
     $("#transcript").on('wordSelected', (event, $w) => {
         setActiveInterface(transcriptInterface)
         wordInfo.setActiveWord($w)
         //transcriptInterface.playTranscriptSegment($w.parent(), $w)
     })
-    transcriptFilters.hide()
-    transcriptSorters.hide()
     
     dropdown.change((e) => {
         transcriptInterface.$transcript.empty() 
@@ -184,9 +194,6 @@ async function start() {
                 $(item).removeClass('selected')
             })
         })
-        // Set up the transcript filters and sorters
-        transcriptFilters.show()
-        transcriptSorters.show()
     })
     // set up buttons
     $('#playControls').hide()

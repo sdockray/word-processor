@@ -436,10 +436,13 @@ class Sequencer {
     const that = this
     this.sequenceIdx = 0
     console.log(`Sequencing at ${Tone.Transport.bpm.value} every ${this.interval} with offset ${this.offset}`)
-    Tone.Transport.scheduleRepeat((time) => {
+    const eventId = Tone.Transport.scheduleRepeat((time) => {
       setTimeout(() => {
         that.sampler.play(that.sequence[that.sequenceIdx], () => {}, that.offset)
         that.sequenceIdx = (that.sequenceIdx + 1) % that.sequence.length
+        if (!that.looping && that.sequenceIdx === 0) {
+          Tone.Transport.clear(eventId)
+        }
       }, that.offset)
     }, this.interval)    
   }
@@ -453,44 +456,8 @@ class Sequencer {
     this.sampler.setVolume(volume)
   }
 
-  playOnBeat(bpm=180, interval="1i") {
-    // If bpm is 0 then we're playing words sequentially
-    if (bpm === 0) {
-      return this.play()
-    }
-    // set the tempo in beats per minute.
-    this.updateBPM(bpm)
-    if (Tone.Transport.state == "started") {
-      console.log("Pausing sequencer")
-      Tone.Transport.pause()
-      //Tone.Transport.cancel()
-      this.transportOffsetTime -= Tone.Transport.immediate() // to prepare for adding when unpaused below
-      // Tone.Transport.dispose()
-      return true
-    }
-    const that = this
-    if (!this.transportOffsetTime) {
-      console.log(`Sequencing at ${Tone.Transport.bpm.value} every ${interval}`)
-      // telling the transport to execute our callback function every eight note.
-      this.transportOffsetTime += Tone.Transport.immediate()
-      Tone.Transport.scheduleRepeat((time) => {
-        //const transportTicks = Tone.Transport.getTicksAtTime(time)
-        //const sequenceIdx = transportTicks % that.sequence.length
-        //console.log(Tone.Transport.immediate(), transportTicks)
-        //that.sampler.playTime(that.sequence[that.sequenceIdx], time - this.transportOffsetTime)
-        that.sampler.play(that.sequence[that.sequenceIdx])
-        // that.sampler.playTime(that.sequence[that.sequenceIdx], time)
-        that.sequenceIdx = (that.sequenceIdx + 1) % that.sequence.length
-      }, interval)
-    } else {
-      this.transportOffsetTime += Tone.Transport.immediate() // see note above
-    }
-    Tone.start();
-    Tone.Transport.start()
-  }
-
   updateBPM(bpm) {
-    if (Tone.Transport.bpm.value != bpm) {
+    if (Number.isInteger(bpm) && Tone.Transport.bpm.value != bpm) {
       console.log("Setting bpm to:", bpm)
       Tone.Transport.bpm.value = bpm
     }
@@ -523,14 +490,18 @@ class MultiSequencer {
     this.sequencers.push(s)
   }
 
-  playOnBeat() {
+  pause() {
     if (Tone.Transport.state == "started") {
       console.log("Pausing sequencer")
       Tone.Transport.stop()
       Tone.Transport.cancel()
       return
     }
-    console.log(this.sequencers)
+  }
+
+  playOnBeat() {    
+    this.pause()
+    // console.log(this.sequencers)
     for (const s of this.sequencers) {
       s.startInterval()
     }
@@ -539,9 +510,16 @@ class MultiSequencer {
   }
 
   updateBPM(bpm) {
-    if (Tone.Transport.bpm.value != bpm) {
+    const prevBpm = Tone.Transport.bpm.value
+    if (prevBpm != bpm) {
       console.log("Setting bpm to:", bpm)
       Tone.Transport.bpm.value = bpm
+      /* // doesnt work yet
+      if (prevBpm===0 || bpm===0) {
+        this.pause()
+        this.playOnBeat()
+      }
+      */
     }
   }
 

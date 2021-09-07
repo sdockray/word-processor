@@ -33,10 +33,6 @@ and 'webpack --watch' if you ever clone this repo -->
                 <div class="col-2" id="leftSide">
                     <h6 class="label">PLAYER</h6>
                     <div class="input-control my-2">
-                        <label for="loadComposition">
-                            <span>load a saved composition</span>
-                            <input type="file" id="loadComposition" style="display:none">
-                        </span>
                         <div id="playControls" class="form-group">
                             <button id="playButton" class="form-group-btn btn-primary btn-small bg-gray-700">&#9658;</button>
                             <input id="bpm" class="form-group-input input-small" type="number" step="1" value="60">
@@ -49,6 +45,10 @@ and 'webpack --watch' if you ever clone this repo -->
                     <!--<button id="recordButton">*</button><a id="downloadLink"></a>-->
                     <div id="stages">
                     </div>
+                    <label for="loadComposition">
+                        <span>load a saved composition</span>
+                        <input type="file" id="loadComposition" style="display:none">
+                    </span>
                 </div>
                 <div class="col-8 " id="middleSide">
                     <h6 class="label">TRANSCRIPT</h6>
@@ -126,13 +126,6 @@ and 'webpack --watch' if you ever clone this repo -->
                             </table>
                         </div>
                         </small>
-
-                    <!--
-                    <div id="transcriptFilters"></div>
-                    <div id="transcriptSorters"></div>
-                    <select id="stageChooser"></select><button id="sendButton">&#9986;</button>
-                    <button id="selectAllButton">select all</button>
-                    -->
                 </div>
             </div>
 
