@@ -91,9 +91,9 @@ class WordInfoInterface {
             pattern.push($ele.data('pos').map(p =>'#'+p).join('+'))
             pos += `<b>${$ele.data('word')}</b><br/>${$ele.data('pos').join(', ')}<br/>`
         }
-        this.hideFields(['.info_length', '.info_duration', '.info_time', '.info_time2', '.info_syllables', '.info_syllableLengths', '.info_syllableSpeed', '.info_phones', '.info_phoneList', '.info_phoneSpeed', '.info_letters'])
+        this.hideFields(['.info_features', '.info_length', '.info_duration', '.info_time', '.info_time2', '.info_syllables', '.info_syllableLengths', '.info_syllableSpeed', '.info_phones', '.info_phoneList', '.info_phoneSpeed', '.info_letters'])
         this.$info.find('#makePhrase').show()
-        console.log('here')
+        
         $('#makePhrase').one('click', debounce(() => {
             if (!phrase[0].hasClass('p')) { 
                 that.words.makePhrase(phrase)
@@ -106,6 +106,29 @@ class WordInfoInterface {
         this.handlePos(pattern.join(' '))
     }
 
+    setAudioFeatures($ele) {
+        if ($ele.data('rms')) {
+            this.$info.find('.rms').show()
+            this.$info.find('.info_features.rms > td').text($ele.data('rms').toFixed(4))
+        }
+        if ($ele.data('zcr')) {
+            this.$info.find('.zcr').show()
+            this.$info.find('.info_features.zcr > td').text($ele.data('zcr').toFixed(2))
+        }
+        if ($ele.data('spectralSlope')) {
+            this.$info.find('.spectralSlope').show()
+            this.$info.find('.info_features.spectralSlope > td').text(($ele.data('spectralSlope')*100000000).toFixed(2))
+        }
+        if ($ele.data('mfcc')) {
+            this.$info.find('.mfcc').show()
+            //const a = Math.atan2($ele.data('mfcc')[1], $ele.data('mfcc')[0]) * 180
+            //const d = Math.sqrt($ele.data('mfcc')[1]*$ele.data('mfcc')[1] + $ele.data('mfcc')[0]+$ele.data('mfcc')[0])
+            //this.$info.find('.info_features.mfcc > td').text(a + ', ' + d + ', ' + $ele.data('mfcc').map(p => p.toFixed(2)).join(', '))
+            this.$info.find('.info_features.mfcc > td').text($ele.data('mfcc').map(p => p.toFixed(2)).join(', '))
+        }
+        this.handleAudioFeatures($ele.data('rms'), $ele.data('zcr'), $ele.data('spectralSlope'))
+    }
+
     setActiveWord($ele) {
         this.$info.removeClass('u-none')
         const duration = $ele.data('end') - $ele.data('start')
@@ -116,9 +139,9 @@ class WordInfoInterface {
         const letters = this.getLettersCount($ele.data('word'))
         //console.log(this.$info.find('.card__header > p'))
         if ($ele.data('pos').includes('Sound')) {
-            this.hideFields(['.info_length', '.info_syllables', '.info_syllableLengths', '.info_syllableSpeed', '.info_phones', '.info_phoneList', '.info_phoneSpeed', '.info_letters'])
+            this.hideFields(['.info_features', '.info_length', '.info_syllables', '.info_syllableLengths', '.info_syllableSpeed', '.info_phones', '.info_phoneList', '.info_phoneSpeed', '.info_letters'])
         } else {
-            this.hideFields([])
+            this.hideFields(['.info_features'])
         }
         this.$info.find('.card__header > p').text($ele.text())
         this.$info.find('.info_length > td').text(length)
@@ -140,6 +163,8 @@ class WordInfoInterface {
             counts.push(key + ":" + letters[key])
         }
         this.$info.find('.info_letters > td').text(counts.join(', '))
+        //
+        this.setAudioFeatures($ele)
         //
         this.handleWord($ele.data('word'))
         this.handleDuration(duration)
@@ -516,5 +541,64 @@ class WordInfoInterface {
                 }, true, this.getLeadingTrailing())
             })
         })
-    }        
+    }  
+    
+    handleAudioFeatures(rms, zcr, ss) {
+        this.$info.find('.info_features').on('click', () => {
+            this.openModal()
+            const $mEle = $('#filter-modal .modal-body .audioFeatures')
+            $mEle.show()
+            $mEle.find('button.rms-asc').on('click', () => {
+                this.history.sort.push(`low to high energy`)
+                this.words.sort((a, b) => {
+                    return a.data('rms') > b.data('rms')
+                })
+            }) 
+            $mEle.find('button.rms-desc').on('click', () => {
+                this.history.sort.push(`high to low energy`)
+                this.words.sort((a, b) => {
+                    return a.data('rms') < b.data('rms')
+                })
+            })  
+            $mEle.find('button.zcr-asc').on('click', () => {
+                this.history.sort.push(`more to less pitchy`)
+                this.words.sort((a, b) => {
+                    return a.data('zcr') > b.data('zcr')
+                })
+            }) 
+            $mEle.find('button.zcr-desc').on('click', () => {
+                this.history.sort.push(`less to more pitchy`)
+                this.words.sort((a, b) => {
+                    return a.data('zcr') < b.data('zcr')
+                })
+            })  
+            $mEle.find('button.ss-asc').on('click', () => {
+                this.history.sort.push(`low to high spectral slope`)
+                this.words.sort((a, b) => {
+                    return a.data('spectralSlope') > b.data('spectralSlope')
+                })
+            }) 
+            $mEle.find('button.ss-desc').on('click', () => {
+                this.history.sort.push(`high to low spectral slope`)
+                this.words.sort((a, b) => {
+                    return a.data('spectralSlope') < b.data('spectralSlope')
+                })
+            })  
+            $mEle.find('button.mfcc-asc').on('click', () => {
+                this.history.sort.push(`by mfcc`)
+                this.words.sort((a, b) => {
+                    return Math.atan2(a.data('mfcc')[1], a.data('mfcc')[0]) * 180 / Math.PI < Math.atan2(b.data('mfcc')[1], b.data('mfcc')[0]) * 180 / Math.PI
+                    //return Math.round(a.data('mfcc')[0])  > Math.round(b.data('mfcc')[0])
+                    //return Math.round(a.data('mfcc')[0]/10)*10 + a.data('mfcc')[1] > Math.round(b.data('mfcc')[0]/10)*10 + b.data('mfcc')[1]
+                })
+            }) 
+            $mEle.find('button.mfcc-desc').on('click', () => {
+                this.history.sort.push(`by mfcc (reverse)`)
+                this.words.sort((a, b) => {
+                    return Math.atan2(a.data('mfcc')[1], a.data('mfcc')[0]) * 180 / Math.PI < Math.atan2(b.data('mfcc')[1], b.data('mfcc')[0]) * 180 / Math.PI
+                    //return Math.round(a.data('mfcc')[0]/10)*10 + a.data('mfcc')[1] < Math.round(b.data('mfcc')[0]/10)*10 + b.data('mfcc')[1]
+                })
+            })  
+        })
+    }
 }

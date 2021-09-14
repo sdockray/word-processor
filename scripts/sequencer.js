@@ -1,10 +1,86 @@
+const extractAudioFeatures = (channelData) => {
+  //
+  const stdDev = (array) => {
+    const n = array.length
+    const mean = array.reduce((a, b) => a + b) / n
+    return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n)
+  }
+  const vectorSum = (r, a) => r.map((b, i) => a[i] + b)
+  const objAvg = (data) => {
+    return Array.from(data.reduce(
+      (acc, obj) => Object.keys(obj).reduce( 
+          (acc, key) => typeof obj[key] == "number"
+              ? acc.set(key, ( // immediately invoked function:
+                      ([sum, count]) => [sum+obj[key], count+1] 
+                  )(acc.get(key) || [0, 0])) // pass previous value
+              : acc,
+      acc),
+    new Map())).reduce(
+      (acc, [key, [sum, count]]) => Object.assign(acc, { [key]: sum/count }),
+      {},
+    )
+  }
+  const fitLine = (data, name, multiplier, arrIdx=-1) => {
+    if (arrIdx<0) {
+      return regression.linear(data.map((p, idx) => [idx, multiplier*p[name]]))
+    } else {
+      return regression.linear(data.map((p, idx) => [idx, multiplier*p[name][arrIdx]]))
+    }
+  }
+  const doMeyda = (name, cd, size) => {
+    let index = 0
+    let arr = []
+    while (index < cd.length - 4096) {
+      let features = Meyda.extract(name, cd.slice(index, index + 4096))
+      Object.keys(features).forEach(function(key) {
+        if (Array.isArray(features[key])) {
+          // nop, this is the case iwth mfcc
+        } else if(features[key] === null || isNaN(features[key])) {
+          features[key] = 0;
+        }
+      })
+      arr.push(features)
+      //console.log(chroma)
+      index += 4096
+    }
+    //const sampleNum = arr.length
+    //const mfccAvg = arr.map(p => p.mfcc).reduce(vectorSum).map(a => a/sampleNum)
+    const fitted = {
+      'rms': fitLine(arr, 'rms', 100),
+      'spectralSlope': fitLine(arr, 'spectralSlope', 100000000),
+      'mfcc': [fitLine(arr, 'mfcc', 1, 0), fitLine(arr, 'mfcc', 1, 1)],
+      'zcr': stdDev(arr.map(p => p.zcr))
+    }
+    console.log(fitted)
+    return fitted
+    /*
+    let avgFeatures = objAvg(arr)
+    avgFeatures.mfcc = mfccAvg
+    avgFeatures.zcr = Math.sqrt(
+      arr.map(p => p.zcr).reduce((acc, val) => acc.concat((val - avgFeatures.zcr) ** 2), []).reduce((acc, val) => acc + val, 0) /
+        (arr.length - 1)
+    )
+    */
+    //return avgFeatures
+  }
+
+  Meyda.chromaBands = 12
+  Meyda.bufferSize = 4096
+  Meyda.numberOfMFCCCoefficients = 2
+  const features = doMeyda(['rms', 'zcr', 'spectralSlope', 'mfcc'/*, 'mfcc'*/], channelData)
+  return features
+}
 
 class AudioSample {
   constructor(url, player) {
     // console.log(url)
+    this.audioFeatures = {}
+    this.audioBuffer = false
     if (url) {
+      this.audioBuffer = url
       this.player = new Tone.Player({url: url})
       this.player.toDestination()
+      this.extractAudioFeatures()
     } else if (player) {
       this.player = player
     }
@@ -24,6 +100,7 @@ class AudioSample {
   setElement($ele) {
     const that = this
     this.$ele = $ele
+    this.tellEleAboutFeatures()
     $ele.on('focusPhones', (event, mode, num) => {
       if (mode=='starting') {
         that.setSpan(0 , $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= num) ? a + b: a ))
@@ -43,6 +120,20 @@ class AudioSample {
       }
     })
     // this.setSpan(0 , $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= 3) ? a + b: a ))
+  }
+
+  tellEleAboutFeatures() {
+    if (this.$ele && this.audioFeatures) {
+      //this.$ele.data('rms', this.audioFeatures.rms)
+      //this.$ele.data('zcr', this.audioFeatures.zcr)
+      //this.$ele.data('spectralSlope', this.audioFeatures.spectralSlope)
+      this.$ele.data(this.audioFeatures)
+    }
+  }
+
+  extractAudioFeatures() {
+    this.audioFeatures = extractAudioFeatures(this.audioBuffer.getChannelData(0))
+    this.tellEleAboutFeatures()
   }
 
   setSpan(start, duration) {
@@ -411,16 +502,25 @@ class Sequencer {
     this.sequence = sampleIds
   }
 
+  setLoop(b) { 
+    this.looping = b
+    if (b) {
+      this.startInterval()
+    }
+  }
+
   playNext(i) {
     if (i===0 || Tone.Transport.state == "started") {
-      if (i < this.sequence.length) {
-        this.sampler.play(this.sequence[i], () => {
-          this.playNext(i+1)
-          this.sampler.clearCallback(this.sequence[i])
-        })
-      } else if (this.sequence.length && this.looping) {
-        this.playNext(0)
-      }
+      setTimeout(() => {
+        if (i < this.sequence.length) {
+          this.sampler.play(this.sequence[i], () => {
+            this.playNext(i+1)
+            this.sampler.clearCallback(this.sequence[i])
+          })
+        } else if (this.sequence.length && this.looping) {
+          this.playNext(0)
+        }
+      }, this.offset)
     }
   }
 

@@ -437,6 +437,11 @@ class TranscriptInterface {
         $w.on('mousedown', () => {
             that.$parent.trigger("wordSelected", [$w])
             $w.toggleClass('selected')
+            that.transcript.loadMedia(that.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), 'wav').then(sample => {
+                //sample.on('starting', console.log('XXX STARTING XXX'));
+                sample.setElement($w)
+                $w.addClass('loaded')
+            })
         })
         return $w
     }

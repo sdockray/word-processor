@@ -67,6 +67,7 @@ function buildStage($parent, $video) {
     const $volumeLabel = $('<label>').addClass("form-group-label label-xsmall volume").text('volume')
     const $volume = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 volume').val("10")
     $volume.prop('type', 'number')
+    const $playTrackButton = $("<button>").addClass("form-group-btn btn-xsmall btn-primary bg-gray-700").html('&#9658;')
     const $loopButton = $("<button>").addClass("form-group-btn btn-xsmall bg-green-500").html('loop')
     
     const setIntervalOffset = (e) => {
@@ -95,13 +96,16 @@ function buildStage($parent, $video) {
     $downloadButton.on('click', function(e) {
         stage.download(parseInt($('#bpm').val()))
     })
+    $playTrackButton.on('click', function(e) {
+        stage.sequencer.startInterval()
+    })
     $loopButton.on('click', function(e) {
-        if (stage.sequencer.looping) {
-            stage.sequencer.looping = false
+        if ($loopButton.hasClass('bg-green-500')) {
+            stage.sequencer.setLoop(false)
             $loopButton.removeClass('bg-green-500')
             $loopButton.addClass('bg-gray-100')
         } else {
-            stage.sequencer.looping = true
+            stage.sequencer.setLoop(true)
             $loopButton.addClass('bg-green-500')
             $loopButton.removeClass('bg-gray-100')
         }
@@ -126,6 +130,7 @@ function buildStage($parent, $video) {
         .append($interval)
         .append($offsetLabel)
         .append($offset)
+        .append($playTrackButton)
         .append($loopButton)
     //$stageContainer.append($filters).append($sorters).append($stage).append($intervalOffsetContainer)
     $stageContainer.append($title).append($stage).append($intervalOffsetContainer)
@@ -215,6 +220,10 @@ async function start() {
             stage.getCurrentSequence()
         })
         spirit.playOnBeat()
+    })
+    $('#stopButton').on('click', () => {
+        spirit.updateBPM(parseInt($('#bpm').val()))
+        spirit.pause()
     })
     // enable video
     $('#enableVideo').on('click', () => {
