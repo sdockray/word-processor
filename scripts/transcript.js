@@ -56,7 +56,24 @@ class Transcript {
         }
     }
 
-    async loadMedia(sampler, docId, mediaId, start, end, codec) {
+    async loadMediaSequence(sampler, mix, start, end, codec) {
+        let spec = []
+        let curT = 0
+        let pause = .4
+        for (const mixWord of mix) {
+            for (const m of mixWord) {
+                curT += this.addMediaSpec(spec, curT, m[0], m[1], m[2], m[3])
+            }
+            curT += pause
+        }
+        const headers = this.getMediaHeaders(spec, curT, codec)
+        return sampler.addFetch('/render', headers, start+'-'+end, start+'-'+end)
+    }
+
+    async loadMedia(sampler, docId, mediaId, start, end, codec, mix) {
+        if (mix && mix.length>0) {
+            return this.loadMediaSequence(sampler, mix, start, end, codec)
+        } else {
             let spec = []
             let curT = this.addMediaSpec(spec, 0, docId, mediaId, start, end)
             let headers = this.getMediaHeaders(spec, curT, codec)
@@ -67,6 +84,7 @@ class Transcript {
             //    sample.play()
             //})
         //}
+        }
     }
 
     // Downloads media and converts to blob
@@ -117,6 +135,97 @@ class Transcript {
         .catch(console.log)
     }
 
+    findPhonemeRun(phones) {
+        const findOverlap = (a, b) => {
+            if (b.length === 0) {
+                return ""
+            }
+            if (a.endsWith(b)) {
+                return b
+            }
+            if (a.indexOf(b) >= 0) {
+                return b
+            }
+            return findOverlap(a, b.substring(0, b.length - 1))
+        }
+        //mediaId: segment.media_id,
+        //const docId = this.docId
+        const phonesStr = phones.join('-')
+        let phonesMap = Object.fromEntries(phones.map(p => [p, []]))
+        let runs = []
+        for (const s of this.segments) {
+            for (const w of s.wdlist) {
+                const phonesStr2 = w.phones.map(p => p[0]).join('-')
+                const overlap = findOverlap(phonesStr, phonesStr2).replace(/^\-+|\-+$/g, '')
+                const overlapArr = overlap.split('-')
+                if (overlapArr.length>1) {
+                    let idx = 0
+                    let start = w.start
+                    let dur = 0
+                    for (const p of w.phones) {
+                        if (p[0]==overlapArr[idx]) {
+                            if (idx === 0) {
+                                start = w.start + dur
+                            }
+                            idx += 1
+                        }
+                        dur += p[1]
+                        if (idx >= overlapArr.length) {
+                            break
+                        }
+                    }
+                    const runData = [s.media_id, this.docId, start, dur, overlapArr.length, overlap, w.word]
+                    runs.push(runData)
+                }
+                let phoneStart = w.start
+                for (const p of w.phones) {
+                    if (phonesMap.hasOwnProperty(p[0])) {
+                        //if (phonesMap[p[0]].length === 0 || p[1] > phonesMap[p[0]][3]) {
+                        if (phonesMap[p[0]].length === 0 || p[1] > .05) {
+                            phonesMap[p[0]].push([s.media_id, this.docId, phoneStart, p[1]])
+                            //phonesMap[p[0]] = [s.media_id, this.docId, phoneStart, p[1]]
+                            break
+                        }
+                    }
+                    phoneStart += p[1]
+                }
+            }
+        }
+        let phonesLeft = phonesStr
+        let usedRuns = {}
+        for (const run of runs.sort((a,b) => { return b[4] == a[4] ? b[5].length - a[5].length : b[4] - a[4] })) {
+            //console.log(phonesLeft, run[1])
+            if (`-${phonesLeft}-`.indexOf(`-${run[5]}-`) !== -1) {
+                phonesLeft = phonesLeft.replace(run[5], '')
+                usedRuns[run[5]] = runs.filter(r => r[5]==run[5])
+            }
+        }
+        let singlePhones = {}
+        if (phonesLeft) {
+            singlePhones = Object.fromEntries(phonesLeft.replace(/^\-+|\-+$/g, '').split('-').map(p => [p, phonesMap[p]]))
+        }
+        const pickBest = () => {
+            for (const [phoneSeq, runs] of Object.entries(usedRuns)) {
+                if (strLeft.startsWith(phoneSeq)) {
+                    return [runs[Math.floor(Math.random()*runs.length)], phoneSeq]
+                }
+            }
+            const aPhone = strLeft.indexOf('-') > 0 ? strLeft.slice(0, strLeft.indexOf('-')) : strLeft
+            //return [singlePhones[aPhone], aPhone]
+            return [singlePhones[aPhone][Math.floor(Math.random()*singlePhones[aPhone].length)], aPhone]
+        }
+        let retArr = []
+        let strLeft = phonesStr
+        let count = 0
+        while (strLeft.length>0 && count<100) {
+            const best = pickBest(strLeft)    
+            retArr.push(best[0])
+            strLeft = strLeft.slice(best[1].length + 1)
+            count +=1 
+        }
+        return retArr
+    }
+
 }
 
 
@@ -137,6 +246,41 @@ class TranscriptInterface {
             this.$audio.get(0).pause()
             this.getCurrentSequence(false)
         })
+    }
+
+    inventPhrase(phrase) {
+        const pause = 0.4
+        const that = this
+        const words = phrase.trim().split('.').map(w => w.trim().split(' ').map(p => p.trim().toLowerCase())).filter(w => w[0]!="")
+        let mix = []
+        let start = 0
+        let dur = 0
+        for (const word of words) {
+            let mixWord = []
+            const phones = this.transcript.findPhonemeRun(word)
+            for (const p in phones) {
+                mixWord.push([phones[p][1], phones[p][0], phones[p][2], phones[p][2]+phones[p][3]])
+                start = start | phones[p][2]
+                dur += phones[p][3]
+            }
+            mix.push(mixWord)
+            dur += pause
+        }
+        const $w = this.makeWord({
+            display: phrase,
+            start: start,
+            end: dur,
+            start2: 0,
+            word: phrase,
+            oWord: phrase,
+            phones: [],
+            mediaId: '',
+            docId: '',
+            pos: [],
+            mix: mix
+        })
+        $w.addClass('selected')
+        this.$transcript.prepend($w)
     }
 
     loadTranscript(id, url) {
@@ -343,10 +487,14 @@ class TranscriptInterface {
         })
         $.each(visibleWords, function (index, item) {
             if (!$(item).hasClass('select')) {
-                setTimeout(() => {
-                    $(item).fadeOut("slow")
-                    //$(item).wrap('<del/>')
-                }, index*speed)
+                if (index<200) {
+                    setTimeout(() => {
+                        $(item).fadeOut("slow")
+                        //$(item).wrap('<del/>')
+                    }, index*speed)
+                } else {
+                    $(item).hide()
+                }
             } else {
                 if (index<200) {
                     setTimeout(() => {
@@ -411,7 +559,7 @@ class TranscriptInterface {
         const that = this
         this.$transcript.append($w).removeClass('selected')
         // const end = $w.data('start') + $w.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= 1) ? a + b: a )
-        this.transcript.loadMedia(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), 'wav').then(sample => {
+        this.transcript.loadMedia(this.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), 'wav', $w.data('mix')).then(sample => {
             //sample.on('starting', console.log('XXX STARTING XXX'));
             sample.setElement($w)
             $w.addClass('loaded')
@@ -432,12 +580,13 @@ class TranscriptInterface {
             phones: opt.phones,
             mediaId: opt.mediaId,
             docId: opt.docId,
-            pos: opt.pos
+            pos: opt.pos,
+            mix: opt.mix
         })
         $w.on('mousedown', () => {
             that.$parent.trigger("wordSelected", [$w])
             $w.toggleClass('selected')
-            that.transcript.loadMedia(that.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), 'wav').then(sample => {
+            that.transcript.loadMedia(that.sequencer.sampler, $w.data('docId'), $w.data('mediaId'), $w.data('start'), $w.data('end'), 'wav', $w.data('mix')).then(sample => {
                 //sample.on('starting', console.log('XXX STARTING XXX'));
                 sample.setElement($w)
                 $w.addClass('loaded')

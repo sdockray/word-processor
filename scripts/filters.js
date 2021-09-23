@@ -35,6 +35,12 @@ const syllables = phonemes => {
     return sylls.reverse()
 }
 
+const areaUnderLine = (l1, duration) => {
+    const p1 = Math.abs(l1['equation'][1])
+    const p2 = Math.abs(l1['equation'][0]*duration + l1['equation'][1])
+    return (p1 + p2) * duration / 2.0
+}
+
 // Word info panel for filtering and sorting
 class WordInfoInterface {
     constructor($parent, words) {
@@ -107,9 +113,13 @@ class WordInfoInterface {
     }
 
     setAudioFeatures($ele) {
+        const formatLine = (p) => {
+            return '='+p['equation'][0]+'t + '+p['equation'][1]
+        }
         if ($ele.data('rms')) {
             this.$info.find('.rms').show()
-            this.$info.find('.info_features.rms > td').text($ele.data('rms').toFixed(4))
+            //this.$info.find('.info_features.rms > td').text($ele.data('rms').toFixed(4))
+            this.$info.find('.info_features.rms > td').text(areaUnderLine($ele.data('rms'), $ele.data('end') - $ele.data('start')).toFixed(2))
         }
         if ($ele.data('zcr')) {
             this.$info.find('.zcr').show()
@@ -117,14 +127,16 @@ class WordInfoInterface {
         }
         if ($ele.data('spectralSlope')) {
             this.$info.find('.spectralSlope').show()
-            this.$info.find('.info_features.spectralSlope > td').text(($ele.data('spectralSlope')*100000000).toFixed(2))
+            //this.$info.find('.info_features.spectralSlope > td').text(($ele.data('spectralSlope')*100000000).toFixed(2))
+            this.$info.find('.info_features.spectralSlope > td').text(areaUnderLine($ele.data('spectralSlope'), $ele.data('end') - $ele.data('start')).toFixed(2))
         }
         if ($ele.data('mfcc')) {
             this.$info.find('.mfcc').show()
             //const a = Math.atan2($ele.data('mfcc')[1], $ele.data('mfcc')[0]) * 180
             //const d = Math.sqrt($ele.data('mfcc')[1]*$ele.data('mfcc')[1] + $ele.data('mfcc')[0]+$ele.data('mfcc')[0])
             //this.$info.find('.info_features.mfcc > td').text(a + ', ' + d + ', ' + $ele.data('mfcc').map(p => p.toFixed(2)).join(', '))
-            this.$info.find('.info_features.mfcc > td').text($ele.data('mfcc').map(p => p.toFixed(2)).join(', '))
+            //this.$info.find('.info_features.mfcc > td').text($ele.data('mfcc').map(p => p.toFixed(2)).join(', '))
+            this.$info.find('.info_features.mfcc > td').text(areaUnderLine($ele.data('mfcc')[0], $ele.data('end') - $ele.data('start')).toFixed(2)+', '+areaUnderLine($ele.data('mfcc')[1], $ele.data('end') - $ele.data('start')).toFixed(2))
         }
         this.handleAudioFeatures($ele.data('rms'), $ele.data('zcr'), $ele.data('spectralSlope'))
     }
@@ -163,6 +175,8 @@ class WordInfoInterface {
             counts.push(key + ":" + letters[key])
         }
         this.$info.find('.info_letters > td').text(counts.join(', '))
+        // clear all button events
+        this.$info.find('*').off('click')
         //
         this.setAudioFeatures($ele)
         //
@@ -187,6 +201,7 @@ class WordInfoInterface {
             }
             return false
         }
+
         this.$info.find('.card__header').on('click', () => {
             this.openModal()
             const $mEle = $('#filter-modal .modal-body .word')
@@ -415,6 +430,10 @@ class WordInfoInterface {
             $mEle.find('.extract button.all').on('click', () => {
                 this.words.trigger('focusPhones', [$mEle.find('.extract select').val(), $mEle.find('.extract input').val()])
             })
+            $mEle.find('.monster button').on('click', () => {
+                const opt = $mEle.find('.monster input').val()
+                this.words.inventPhrase(opt)
+            })
         })
     }
 
@@ -544,6 +563,11 @@ class WordInfoInterface {
     }  
     
     handleAudioFeatures(rms, zcr, ss) {
+        const compareLines = (l1, l2, duration1, duration2) => {
+            const x = 5
+            // return l1['equation'][0]*x + l1['equation'][1] > l2['equation'][0]*x + l2['equation'][1]
+            return areaUnderLine(l1, duration1) > areaUnderLine(l2, duration2)
+        }
         this.$info.find('.info_features').on('click', () => {
             this.openModal()
             const $mEle = $('#filter-modal .modal-body .audioFeatures')
@@ -551,13 +575,15 @@ class WordInfoInterface {
             $mEle.find('button.rms-asc').on('click', () => {
                 this.history.sort.push(`low to high energy`)
                 this.words.sort((a, b) => {
-                    return a.data('rms') > b.data('rms')
+                    return compareLines(a.data('rms'), b.data('rms'), a.data('end') - a.data('start'), b.data('end') - b.data('start'))
+                    //return a.data('rms') > b.data('rms')
                 })
             }) 
             $mEle.find('button.rms-desc').on('click', () => {
                 this.history.sort.push(`high to low energy`)
                 this.words.sort((a, b) => {
-                    return a.data('rms') < b.data('rms')
+                    return !compareLines(a.data('rms'), b.data('rms'), a.data('end') - a.data('start'), b.data('end') - b.data('start'))
+                    //return a.data('rms') < b.data('rms')
                 })
             })  
             $mEle.find('button.zcr-asc').on('click', () => {
@@ -575,19 +601,22 @@ class WordInfoInterface {
             $mEle.find('button.ss-asc').on('click', () => {
                 this.history.sort.push(`low to high spectral slope`)
                 this.words.sort((a, b) => {
-                    return a.data('spectralSlope') > b.data('spectralSlope')
+                    return compareLines(a.data('spectralSlope'), b.data('spectralSlope'), a.data('end') - a.data('start'), b.data('end') - b.data('start'))
+                    //return a.data('spectralSlope') > b.data('spectralSlope')
                 })
             }) 
             $mEle.find('button.ss-desc').on('click', () => {
                 this.history.sort.push(`high to low spectral slope`)
                 this.words.sort((a, b) => {
-                    return a.data('spectralSlope') < b.data('spectralSlope')
+                    return !compareLines(a.data('spectralSlope'), b.data('spectralSlope'), a.data('end') - a.data('start'), b.data('end') - b.data('start'))
+                    //return a.data('spectralSlope') < b.data('spectralSlope')
                 })
             })  
             $mEle.find('button.mfcc-asc').on('click', () => {
                 this.history.sort.push(`by mfcc`)
                 this.words.sort((a, b) => {
-                    return Math.atan2(a.data('mfcc')[1], a.data('mfcc')[0]) * 180 / Math.PI < Math.atan2(b.data('mfcc')[1], b.data('mfcc')[0]) * 180 / Math.PI
+                    return compareLines(a.data('mfcc')[0], b.data('mfcc')[0], a.data('end') - a.data('start'), b.data('end') - b.data('start'))
+                    //return Math.atan2(a.data('mfcc')[1], a.data('mfcc')[0]) * 180 / Math.PI < Math.atan2(b.data('mfcc')[1], b.data('mfcc')[0]) * 180 / Math.PI
                     //return Math.round(a.data('mfcc')[0])  > Math.round(b.data('mfcc')[0])
                     //return Math.round(a.data('mfcc')[0]/10)*10 + a.data('mfcc')[1] > Math.round(b.data('mfcc')[0]/10)*10 + b.data('mfcc')[1]
                 })
@@ -595,7 +624,8 @@ class WordInfoInterface {
             $mEle.find('button.mfcc-desc').on('click', () => {
                 this.history.sort.push(`by mfcc (reverse)`)
                 this.words.sort((a, b) => {
-                    return Math.atan2(a.data('mfcc')[1], a.data('mfcc')[0]) * 180 / Math.PI < Math.atan2(b.data('mfcc')[1], b.data('mfcc')[0]) * 180 / Math.PI
+                    return compareLines(a.data('mfcc')[1], b.data('mfcc')[1], a.data('end') - a.data('start'), b.data('end') - b.data('start'))
+                    //return Math.atan2(a.data('mfcc')[1], a.data('mfcc')[0]) * 180 / Math.PI < Math.atan2(b.data('mfcc')[1], b.data('mfcc')[0]) * 180 / Math.PI
                     //return Math.round(a.data('mfcc')[0]/10)*10 + a.data('mfcc')[1] < Math.round(b.data('mfcc')[0]/10)*10 + b.data('mfcc')[1]
                 })
             })  

@@ -51,7 +51,6 @@ const extractAudioFeatures = (channelData) => {
       'mfcc': [fitLine(arr, 'mfcc', 1, 0), fitLine(arr, 'mfcc', 1, 1)],
       'zcr': stdDev(arr.map(p => p.zcr))
     }
-    console.log(fitted)
     return fitted
     /*
     let avgFeatures = objAvg(arr)
@@ -78,6 +77,7 @@ class AudioSample {
     this.audioBuffer = false
     if (url) {
       this.audioBuffer = url
+      //this.player = new Tone.GrainPlayer({url: url})
       this.player = new Tone.Player({url: url})
       this.player.toDestination()
       this.extractAudioFeatures()
@@ -90,6 +90,8 @@ class AudioSample {
     this.label = "..."
     this.pitchShifter = false
     this.volume = 10
+    this.playbackRate = 1
+    this.pitch = 0
     this.start = -1
     this.duration = -1
     this.$ele = false
@@ -149,6 +151,14 @@ class AudioSample {
     this.volume = volume
   }
 
+  setRate(rate) {
+    this.playbackRate = rate
+  }
+
+  setPitch(pitch) {
+    this.pitch = pitch
+  }
+
   loop(stop) {
     this.player.loop = !stop
   }
@@ -168,6 +178,8 @@ class AudioSample {
     }
     //this.emit('starting')
     this.player.volume.value = this.volume
+    this.player.playbackRate = this.playbackRate
+    //this.player.detune = this.pitch
     if (this.start>=0 && this.duration>=0) {
       this.player.start("0.05", this.start + .05, this.duration)
       //this.player.start(0, this.start, this.duration)
@@ -293,6 +305,8 @@ class Sampler {
   constructor() {
     this.samples = {}
     this.volume = 10
+    this.rate = 1
+    this.pitch = 0 // detune
     this.play = this.play.bind(this)
   }
 
@@ -339,6 +353,22 @@ class Sampler {
     this.volume = volume
     for (const idx in this.samples) {
       this.samples[idx].setVolume(volume)
+    }
+  }
+
+  setRate(rate) {
+    console.log('setting rate to:', rate)
+    this.rate = rate
+    for (const idx in this.samples) {
+      this.samples[idx].setRate(rate)
+    }
+  }
+
+  setPitch(pitch) {
+    console.log('detuning to:', pitch)
+    this.pitch = pitch
+    for (const idx in this.samples) {
+      this.samples[idx].setPitch(pitch)
     }
   }
 
@@ -553,7 +583,21 @@ class Sequencer {
   }
 
   setVolume(volume) {
-    this.sampler.setVolume(volume)
+    if (Number.isInteger(volume)) {
+      this.sampler.setVolume(volume)
+    }
+  }
+
+  setRate(rate) {
+    if (!isNaN(rate)) {
+      this.sampler.setRate(rate)
+    }
+  }
+
+  setPitch(pitch) {
+    if (Number.isInteger(pitch)) {
+      this.sampler.setPitch(pitch)
+    }
   }
 
   updateBPM(bpm) {
@@ -566,6 +610,8 @@ class Sequencer {
   load(data) {
     this.setInterval(data.interval, data.offset)
     this.setVolume(data.volume) 
+    this.setRate(data.rate) 
+    this.setPitch(data.pitch) 
   }
 
   export() {
@@ -573,6 +619,8 @@ class Sequencer {
       interval: this.interval,
       offset: this.offset,
       volume: this.sampler.volume,
+      rate: this.sampler.rate,
+      pitch: this.sampler.pitch,
       sequence: this.sequence,
       samples: this.sampler.export()
     }   

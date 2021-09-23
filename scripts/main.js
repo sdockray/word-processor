@@ -35,109 +35,6 @@ function setActiveInterface(t) {
     t.isActive = true
 }
 
-function buildStage($parent, $video) {
-    $stageContainer = $('<div>').addClass('stage card bg-gray-700')
-    const $title = $('<small class="stage-title text-gray-000">')
-    const $stage = $('<div>').addClass('words')
-    const stage = new TranscriptInterface($stage)
-    stage.sequencer.setVideoPlayer($video)
-    spirit.addSequencer(stage.sequencer)
-    stages.push(stage)
-    $('#stageChooser').append($('<option></option>').attr('value', stages.length - 1).text(stages.length))
-    const $filters = $('<div>')
-    const $sorters = $('<div>')
-    // const $interval = $('<input>').addClass('interval').attr('placeholder', '4n').val("4n")
-    const intervals = ["1n", "2n", "4n", "8n", "16n"]
-    const $interval = $('<select>').addClass('select input-xsmall form-group-input bg-gray-200 interval')
-    $.each(intervals, function (key, entry) {
-        $interval.append($('<option></option>').attr('value', entry).text(entry))
-    })
-    $interval.prop('selectedIndex', 2)
-    $interval.change((e) => {
-        stage.sequencer.setInterval(e.target.value, $offset.val())
-    })
-    const $offset = $('<input>').addClass('offset form-group-input input-xsmall bg-gray-200').val("0")
-    $offset.prop('type', 'number')
-    const $downloadButton = $("<button>").addClass("tooltip tooltip--top--right form-group-btn btn-xsmall bg-gray-500").text('dl')
-    $downloadButton.prop('data-tooltip', 'Download this track (buggy)')
-    const $intervalLabel = $('<label>').addClass("tooltip form-group-label label-xsmall").text('interval')
-    $intervalLabel.prop('data-tooltip', '4n is on the wpm beat')
-    const $offsetLabel = $('<label>').addClass("tooltip form-group-label label-xsmall").text('offset')
-    $offsetLabel.prop('data-tooltip', 'In milliseconds')
-    const $volumeLabel = $('<label>').addClass("form-group-label label-xsmall volume").text('volume')
-    const $volume = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 volume').val("10")
-    $volume.prop('type', 'number')
-    const $playTrackButton = $("<button>").addClass("form-group-btn btn-xsmall btn-primary bg-gray-700").html('&#9658;')
-    const $loopButton = $("<button>").addClass("form-group-btn btn-xsmall bg-green-500").html('loop')
-    
-    const setIntervalOffset = (e) => {
-        if(e.which === 13){
-            //Disable textbox to prevent multiple submit
-            $offset.attr("disabled", "disabled")
-            // stage.sequencer.updateBPM(parseInt($('#bpm').val()))
-            stage.sequencer.setInterval($interval.val(), $offset.val())
-            //Enable the textbox again if needed.
-            $offset.removeAttr("disabled")
-        }
-    }
-    $interval.on('change', function (e) {
-       setIntervalOffset(e)
-    })
-    $offset.on('keypress', function (e) {
-        setIntervalOffset(e)
-    })
-    $volume.on('keypress', function (e) {
-        if(e.which === 13){
-            $volume.attr("disabled", "disabled")
-            stage.sequencer.setVolume(parseInt($volume.val()))
-            $volume.removeAttr("disabled")
-        }
-    })
-    $downloadButton.on('click', function(e) {
-        stage.download(parseInt($('#bpm').val()))
-    })
-    $playTrackButton.on('click', function(e) {
-        stage.sequencer.startInterval()
-    })
-    $loopButton.on('click', function(e) {
-        if ($loopButton.hasClass('bg-green-500')) {
-            stage.sequencer.setLoop(false)
-            $loopButton.removeClass('bg-green-500')
-            $loopButton.addClass('bg-gray-100')
-        } else {
-            stage.sequencer.setLoop(true)
-            $loopButton.addClass('bg-green-500')
-            $loopButton.removeClass('bg-gray-100')
-        }
-    })
-    //const stageFilters = new FilterInterface($filters, stage)
-    //const stageSorters = new SorterInterface($sorters, stage)
-    const thisWordInfo = new WordInfoInterface($('#wordInfo'), stage)
-    thisWordInfo.startHistory('')
-    $title.on('click', () => {
-        const h = $title.text()
-        $title.text(h + ' / ' + thisWordInfo.getHistory())
-    })
-    $stage.on('wordSelected', (event, $w) => {
-        setActiveInterface(stage)
-        thisWordInfo.setActiveWord($w)
-    })
-    $intervalOffsetContainer = $('<div>').addClass('form-group')
-        .append($downloadButton)
-        .append($volumeLabel)
-        .append($volume)
-        .append($intervalLabel)
-        .append($interval)
-        .append($offsetLabel)
-        .append($offset)
-        .append($playTrackButton)
-        .append($loopButton)
-    //$stageContainer.append($filters).append($sorters).append($stage).append($intervalOffsetContainer)
-    $stageContainer.append($title).append($stage).append($intervalOffsetContainer)
-    $parent.append($stageContainer)
-    $stageContainer.hide()
-}
-
 async function start() {
     // Set up the transcript chooser
     let dropdown = $('#transcriptChooser')
@@ -261,8 +158,19 @@ async function start() {
                     }
                     stage.sequencer.load(seq)
                     stage.$parent.parent().find('.form-group input.volume').val(seq.volume)
-                    stage.$parent.parent().find('.form-group select.interval').val(seq.interval)
+                    if (seq.interval.endsWith('hz')) {
+                        stage.$parent.parent().find('.form-group select.interval').val('custom wpm')
+                        stage.$parent.parent().find('.form-group select.customInterval').val(parseFloat(seq.interval.slice(0, -2))*60)
+                    } else {
+                        stage.$parent.parent().find('.form-group select.interval').val(seq.interval)
+                    }
                     stage.$parent.parent().find('.form-group input.offset').val(seq.offset)
+                    if (seq.rate) {
+                        stage.$parent.parent().find('.form-group input.rate').val(seq.rate)
+                    }
+                    if (seq.pitch) {
+                        stage.$parent.parent().find('.form-group input.pitch').val(seq.pitch)
+                    }
                 }
             }
         })

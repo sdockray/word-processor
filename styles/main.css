@@ -38,7 +38,7 @@ h6.label {
 #stages .stage .words {
   height: 200px;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
 }
 
 #stages .stage .words .w {
