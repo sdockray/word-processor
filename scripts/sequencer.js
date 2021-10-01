@@ -84,6 +84,8 @@ class AudioSample {
     } else if (player) {
       this.player = player
     }
+    this.stopFns = []
+    this.player.onstop = this.stopping.bind(this)
     this.player.fadeIn = 0.1
     this.player.fadeOut = 0.1
     
@@ -103,17 +105,46 @@ class AudioSample {
     const that = this
     this.$ele = $ele
     this.tellEleAboutFeatures()
-    $ele.on('focusPhones', (event, mode, num) => {
+    const phoneExtraction = (startIdx, num) => {
+      const dur1 = $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i < startIdx) ? a + b: a, 0 )
+      const dur2 = $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i >= startIdx && i <= startIdx + num) ? a + b: a )
+      that.setSpan(dur1 , dur2)
+      const phonesStr = $ele.data('phones').map(p => p[0]).slice(startIdx, startIdx + num).join(',')
+      $ele.text(phonesStr)
+    } 
+    $ele.on('focusPhones', (event, mode, num, startAt) => {
       if (mode=='starting') {
-        that.setSpan(0 , $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= num) ? a + b: a ))
-        const phonesStr = $ele.data('phones').map(p => p[0]).slice(0, num).join(',')
-        $ele.text(phonesStr)
+        phoneExtraction(0, num)
       } else if (mode=='ending') {
         const nPhones = $ele.data('phones').length - num
-        const dur1 = $ele.data('phones').map(p => p[1]).reduce((a, b, i) => (i <= nPhones) ? a + b: a )
-        that.setSpan(dur1 , $ele.data('end') - $ele.data('start') - dur1)
-        const phonesStr = $ele.data('phones').map(p => p[0]).slice(-1*num).join(',')
+        phoneExtraction(nPhones, num)
+      } else if (mode=='from') {
+        const start = startAt - 1
+        phoneExtraction(start, num)
+      } else if (mode=="reset") {
+        this.start = -1
+        this.duration = -1
+        const phonesStr = $ele.data('oWord')
         $ele.text(phonesStr)
+      }
+    })
+    $ele.on('focusSyllables', (event, mode, num, startAt) => {
+      const sylls = syllables($ele.data('phones'))
+      const syllExtraction = (startIdx, numSylls) => {
+        const startPhoneIdx = sylls.map(s => s.length).reduce((a, b, i) => (i < startIdx) ? a + b: a, 0 )
+        const numPhones = sylls.map(s => s.length).reduce((a, b, i) => (i >= startIdx && i < startIdx + numSylls) ? a + b: a )
+        //console.log(startIdx, numSylls, startPhoneIdx, numPhones)
+        phoneExtraction(startPhoneIdx, numPhones)
+      }
+      if (mode=='starting') {
+        // num sylables = how many phonemes?
+        syllExtraction(0, num)
+      } else if (mode=='ending') {
+        const nSylls = sylls.length - num
+        syllExtraction(nSylls, num)
+      } else if (mode=='from') {
+        const start = startAt - 1
+        syllExtraction(start, num)
       } else if (mode=="reset") {
         this.start = -1
         this.duration = -1
@@ -163,19 +194,28 @@ class AudioSample {
     this.player.loop = !stop
   }
 
+  stopping() {
+    this.$ele.removeClass('playing')
+    if (this.stopFns) {
+      for (const fn of this.stopFns) {
+        fn()
+      }
+    } 
+  }
+
   play(onstop) {
     // this.samples[idx].playbackRate = 1.75;
     //console.log(this.label, onstop)
     if (onstop) {
-      this.player.onstop = onstop
-    } else {
-      this.player.onstop = () => {}
+      this.stopFns.push(onstop)
     }
     if (!this.player.loaded) {
       // console.log('not loaded')
       this.player.onstop()
       return
     }
+    //
+    this.$ele.addClass('playing')
     //this.emit('starting')
     this.player.volume.value = this.volume
     this.player.playbackRate = this.playbackRate
@@ -194,7 +234,7 @@ class AudioSample {
   }
 
   clearCallback() {
-    this.player.onstop = () => {}
+    this.stopFns = []
   }
 
 }  

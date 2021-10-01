@@ -48,6 +48,10 @@ h6.label {
   margin: 5px;
 }
 
+#stages .stage .words .w.playing {
+  background-color: greenyellow;
+}
+
 body.expanded #enableVideo,
 body.expanded #uploadSequencers,
 body.expanded #downloadSequencers {

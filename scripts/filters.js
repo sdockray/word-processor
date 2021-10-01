@@ -177,6 +177,7 @@ class WordInfoInterface {
         this.$info.find('.info_letters > td').text(counts.join(', '))
         // clear all button events
         this.$info.find('*').off('click')
+        $('#filter-modal .modal-body').find('*').off('click')
         //
         this.setAudioFeatures($ele)
         //
@@ -424,11 +425,17 @@ class WordInfoInterface {
                     }
                 }, true, this.getLeadingTrailing())
             })
+            $mEle.find('.extract select').on('change', () => {
+                $mEle.find('.extract input.from').addClass('u-none')
+                if ($mEle.find('.extract select').val()=='from') {
+                    $mEle.find('.extract input.from').removeClass('u-none')
+                }
+            })
             $mEle.find('.extract button.this').on('click', () => {
-                $w.trigger('focusPhones', [$mEle.find('.extract select').val(), $mEle.find('.extract input').val()])
+                $w.trigger('focusPhones', [$mEle.find('.extract select').val(), parseInt($mEle.find('.extract input.num').val()), parseInt($mEle.find('.extract input.from').val())])
             })
             $mEle.find('.extract button.all').on('click', () => {
-                this.words.trigger('focusPhones', [$mEle.find('.extract select').val(), $mEle.find('.extract input').val()])
+                this.words.trigger('focusPhones', [$mEle.find('.extract select').val(), parseInt($mEle.find('.extract input.num').val()), parseInt($mEle.find('.extract input.from').val())])
             })
             $mEle.find('.monster button').on('click', () => {
                 const opt = $mEle.find('.monster input').val()
@@ -483,6 +490,18 @@ class WordInfoInterface {
                         return syDurs.length && sIdx == syDurs.length
                     }
                 }, true, this.getLeadingTrailing())
+            })
+            $mEle.find('.extract select').on('change', () => {
+                $mEle.find('.extract input.from').addClass('u-none')
+                if ($mEle.find('.extract select').val()=='from') {
+                    $mEle.find('.extract input.from').removeClass('u-none')
+                }
+            })
+            $mEle.find('.extract button.this').on('click', () => {
+                $w.trigger('focusSyllables', [$mEle.find('.extract select').val(), parseInt($mEle.find('.extract input.num').val()), parseInt($mEle.find('.extract input.from').val())])
+            })
+            $mEle.find('.extract button.all').on('click', () => {
+                this.words.trigger('focusSyllables', [$mEle.find('.extract select').val(), parseInt($mEle.find('.extract input.num').val()), parseInt($mEle.find('.extract input.from').val())])
             })
             $mEle.find('button.slow-to-fast').on('click', () => {
                 this.history.sort.push(`slow to fast words`)

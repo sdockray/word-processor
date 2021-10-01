@@ -244,12 +244,14 @@ and 'webpack --watch' if you ever clone this repo -->
                     <div class="divider"></div>
                     <div class="form-group extract">
                         <label class="form-group-label label-small">extract</label>
-                        <input class="input-small form-group-input" type="number" step="1" value="3">
+                        <input class="input-small form-group-input num" type="number" step="1" value="3">
                         <select class="select input-small form-group-input">
                             <option value="starting">at start</option>
                             <option value="ending">at end</option>
+                            <option value="from">from</option>
                             <option value="reset">reset</option>
                         </select>
+                        <input class="input-small form-group-input u-none from" type="number" step="1" value="1">
                         <button class="form-group-btn btn-primary btn-small this">this</button>
                         <button class="form-group-btn btn-primary btn-small all">all</button>
                     </div>
@@ -282,6 +284,20 @@ and 'webpack --watch' if you ever clone this repo -->
                             <option value="custom" selected>at position</option>
                         </select>
                         <button class="form-group-btn btn-primary btn-small">keep</button>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="form-group extract">
+                        <label class="form-group-label label-small">extract</label>
+                        <input class="input-small form-group-input num" type="number" step="1" value="3">
+                        <select class="select input-small form-group-input">
+                            <option value="starting">at start</option>
+                            <option value="ending">at end</option>
+                            <option value="from">from</option>
+                            <option value="reset">reset</option>
+                        </select>
+                        <input class="input-small form-group-input u-none from" type="number" step="1" value="1">
+                        <button class="form-group-btn btn-primary btn-small this">this</button>
+                        <button class="form-group-btn btn-primary btn-small all">all</button>
                     </div>
                     <div class="divider"></div>
                     <button class="btn-info btn-xsmall fast-to-slow">sort fast to slow</button>
