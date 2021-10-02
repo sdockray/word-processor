@@ -417,6 +417,9 @@ class Sampler {
     for (const idx in this.samples) {
       const $ele = this.samples[idx].$ele
       data[idx] = $ele.data()
+      if (this.samples[idx].start>=0 && this.samples[idx].duration>=0) {
+        data[idx]['span'] = [this.samples[idx].start, this.samples[idx].duration]
+      }
       data[idx].display = $ele.text()
     }
     return data

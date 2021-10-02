@@ -165,6 +165,7 @@ async function start() {
                         stage.$parent.parent().find('.form-group select.interval').val(seq.interval)
                     }
                     stage.$parent.parent().find('.form-group input.offset').val(seq.offset)
+                    stage.sequencer.setInterval(seq.interval, seq.offset)
                     if (seq.rate) {
                         stage.$parent.parent().find('.form-group input.rate').val(seq.rate)
                     }

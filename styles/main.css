@@ -35,8 +35,14 @@ h6.label {
   border-bottom: 1px dashed gray;
 }
 
+#stages .stage.resizable {
+  resize: both;
+  overflow: scroll;
+  border: 1px solid black;
+}
+
 #stages .stage .words {
-  height: 200px;
+  max-height: 200px;
   overflow-x: auto;
   overflow-y: auto;
 }

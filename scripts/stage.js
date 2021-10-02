@@ -1,5 +1,6 @@
 function buildStage($parent, $video) {
     $stageContainer = $('<div>').addClass('stage card bg-gray-700')
+    const $unlock = $('<small class="unlock text-gray-000">').text('o')
     const $title = $('<small class="stage-title text-gray-000">')
     const $stage = $('<div>').addClass('words')
     const stage = new TranscriptInterface($stage)
@@ -32,6 +33,7 @@ function buildStage($parent, $video) {
     const $volumeLabel = $('<label>').addClass("form-group-label label-xsmall volume").text('volume')
     const $volume = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 volume').val("10")
     $volume.prop('type', 'number')
+    const $muteButton = $("<button>").addClass("form-group-btn btn-xsmall bg-gray-100").html('mute')
     const $rateLabel = $('<label>').addClass("form-group-label label-xsmall rate").text('rate')
     const $rate = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 rate').val("1")
     $rate.prop('type', 'number').prop('step', '.01')
@@ -106,6 +108,19 @@ function buildStage($parent, $video) {
             $loopButton.removeClass('bg-gray-100')
         }
     })
+    let stashedVolume = 10
+    $muteButton.on('click', function(e) {
+        if ($muteButton.hasClass('bg-purple-500')) {
+            stage.sequencer.setVolume(stashedVolume)
+            $muteButton.removeClass('bg-purple-500')
+            $muteButton.addClass('bg-gray-100')
+        } else {
+            stashedVolume = stage.sequencer.sampler.volume
+            stage.sequencer.setVolume(-100)
+            $muteButton.addClass('bg-purple-500')
+            $muteButton.removeClass('bg-gray-100')
+        }
+    })
     //const stageFilters = new FilterInterface($filters, stage)
     //const stageSorters = new SorterInterface($sorters, stage)
     const thisWordInfo = new WordInfoInterface($('#wordInfo'), stage)
@@ -118,10 +133,14 @@ function buildStage($parent, $video) {
         setActiveInterface(stage)
         thisWordInfo.setActiveWord($w)
     })
+    $unlock.on('click', () => {
+        $stageContainer.addClass('resizable')
+    })
     $intervalOffsetContainer = $('<div>').addClass('form-group')
         .append($downloadButton)
         .append($volumeLabel)
         .append($volume)
+        .append($muteButton)
         .append($intervalLabel)
         .append($interval)
         .append($customInterval)
@@ -133,7 +152,7 @@ function buildStage($parent, $video) {
         //.append($pitch)
         .append($playTrackButton)
         .append($loopButton)
-    //$stageContainer.append($filters).append($sorters).append($stage).append($intervalOffsetContainer)
+    //$stageContainer.append($unlock).append($title).append($stage).append($intervalOffsetContainer)
     $stageContainer.append($title).append($stage).append($intervalOffsetContainer)
     $parent.append($stageContainer)
     $stageContainer.hide()

@@ -590,6 +590,9 @@ class TranscriptInterface {
                 //sample.on('starting', console.log('XXX STARTING XXX'));
                 sample.setElement($w)
                 $w.addClass('loaded')
+                if (opt.hasOwnProperty('span') && opt.span.length==2) {
+                    sample.setSpan(opt.span[0], opt.span[1])
+                }
             })
         })
         return $w
