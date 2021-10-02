@@ -541,6 +541,7 @@ class TranscriptInterface {
         if (play) {
             this.sequencer.play()
         }
+        return newSequence
     }
 
     loadVideoClips() {

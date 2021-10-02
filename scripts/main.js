@@ -86,8 +86,6 @@ async function start() {
             $('#playControls').show()
             const stage = stages[parseInt($('#stageChooser').val())]
             stage.$parent.parent().show()
-            $('#video-'+parseInt($('#stageChooser').val())).removeClass('enabled')
-            $('#video-'+parseInt($('#stageChooser').val())).addClass('enabled')
             const h = stage.$parent.parent().find('.stage-title').text()
             stage.$parent.parent().find('.stage-title').text(h + ' / ' + wordInfo.getHistory())
             $.each(transcriptInterface.$transcript.find('.w.selected:visible'), function(index, item) {
@@ -104,12 +102,11 @@ async function start() {
     $('#sendButton').hide()
     $('#stageChooser').hide()
     // set up stage
-    buildStage($('#stages'), $('#video-1'))
-    buildStage($('#stages'), $('#video-2'))
-    buildStage($('#stages'), $('#video-3'))
-    $('#video-1').hide()
-    $('#video-2').hide()
-    $('#video-3').hide()
+    $( ".videoContainer" ).each((i, v) => {
+        buildStage($('#stages'), $( v ).find('video'))
+        $( v ).drag()
+        //$( this ).hide()
+    })
     //$('#interval').hide()
     $('#playButton').on('click', () => {
         spirit.updateBPM(parseInt($('#bpm').val()))
@@ -127,10 +124,12 @@ async function start() {
         console.log('enabling video')
         $.each(stages, function (key, stage) {
             stage.loadVideoClips()
+            if (stage.getCurrentSequence().length>0) {
+                const vid = key + 1
+                $("#video-"+vid).show()
+                $("#video-"+vid).addClass('enabled')
+            }
         })
-        $('#video-1').show()
-        $('#video-2').show()
-        $('#video-3').show()
     })
     // download sequencer
     $('#downloadSequencers').on('click', () => {
@@ -189,9 +188,9 @@ async function start() {
             $('#middleSide').show()
             $('#leftSide').removeClass('col-10')
             $('#leftSide').addClass('col-2')
-            $('#video-1').hide()
-            $('#video-2').hide()
-            $('#video-3').hide()
+            $('.videoContainer').each((i, v) => {
+                $( v ).hide()
+            })
             $.each(stages, function (key, stage) {
                 stage.sequencer.useSampler('audio')
             })

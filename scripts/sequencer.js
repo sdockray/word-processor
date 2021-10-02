@@ -250,7 +250,7 @@ class SmoothVideo {
     const $cloned = this.$video.clone()
     this.$video.parent().append($cloned)
     this.$video.addClass('garbage')
-    const z = this.$video.css('z-index')
+    const z = parseInt(this.$video.css('z-index'))
     $cloned.css("z-index", z+1)
     // once loaded swap and play
     $cloned.get(0).addEventListener('loadeddata', () => {

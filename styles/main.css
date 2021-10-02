@@ -78,9 +78,19 @@ body #stages .stage .form-group button {
   display: none;
 }
 
+.videoContainer {
+  resize: both;
+  display: none;
+  overflow: hidden;
+  position: absolute;
+}
+
+.videoContainer video {
+  width: 100%    !important;
+  height: auto   !important;
+}
 
 #video-1 {
-  position: absolute;
   left: 5%;
   top: 5%;
   width: 50%;
@@ -90,7 +100,6 @@ body #stages .stage .form-group button {
 }
 
 #video-2 {
-  position: absolute;
   left: 45%;
   top: 45%;
   width: 50%;
@@ -100,7 +109,6 @@ body #stages .stage .form-group button {
 }
 
 #video-3 {
-  position: absolute;
   left: 65%;
   top: 15%;
   width: 25%;
@@ -109,9 +117,7 @@ body #stages .stage .form-group button {
   z-Index: 10;
 }
 
-#video-1.enabled, 
-#video-2.enabled, 
-#video-3.enabled {
+.videoContainer.enabled {
   background-color: black;
   display: block;
 }
