@@ -320,8 +320,11 @@ class TranscriptInterface {
     }
 
     reloadTranscript() {
-        this.$transcript.empty()
-        this.render() 
+        //this.$transcript.empty()
+        //this.render() 
+        this.$transcript.find('.w')
+            .removeClass('selected')
+            .show()
     }
 
     pauseTranscript() {
@@ -340,7 +343,6 @@ class TranscriptInterface {
     }
 
     async playTranscript(idx) {
-        console.log(this.commonWords(5))
         if (this.playableTranscript) {
             const a = this.$audio.get(0)
             a.pause()
@@ -454,10 +456,20 @@ class TranscriptInterface {
         visibleWords.trigger(event, params)
     }
 
+    isEndOfSentence(word) {
+        if (word && word.length) {
+            const lastLetter = word.charAt(word.length - 2)
+            return (lastLetter=='.' || lastLetter=='?' || lastLetter=='!')
+        } else {
+            return false
+        }
+    }
+
     filter(filterFunc, keep=1, leadingTrailing=[0,0]) {
         if (!this.isActive) {
             return false
         }
+        const tn = Date.now()
         const visibleWords = this.$transcript.find('.w:visible')
         let speed = Math.round(2000/visibleWords.length)+2
         // const speed = 2
@@ -469,16 +481,28 @@ class TranscriptInterface {
                 let words = [$(item)]
                 $(item).addClass('select')
                 let $i = $(item)
+                let keepGoing = true
                 Array.from(Array(leadingTrailing[0])).map((_) => {
                     $i = $i.prev()
-                    $i.addClass('select')
-                    words.push($i)
+                    if (that.isEndOfSentence($i.data('oWord'))) {
+                        keepGoing = false
+                    }
+                    if (keepGoing) {
+                        $i.addClass('select')
+                        words.push($i)
+                    }
                 })
                 $i = $(item)
+                keepGoing = !that.isEndOfSentence($i.data('oWord'))
                 Array.from(Array(leadingTrailing[1])).map((_) => {
                     $i = $i.next()
-                    $i.addClass('select')
-                    words.push($i)
+                    if (keepGoing) {
+                        $i.addClass('select')
+                        words.push($i)
+                    }
+                    if (that.isEndOfSentence($i.data('oWord'))) {
+                        keepGoing = false
+                    }
                 })
                 if (words.length > 1) {
                     phrases.push(words.sort((a,b) => a.data('start') > b.data('start')))

@@ -18,7 +18,7 @@ $.fn.drag = function (val) {
     };
 
     val = $.extend(settings, val);
-    console.log(val);
+    //console.log(val);
 
     if (val.handle === "") {
         var $element = baseVal;

@@ -3,6 +3,15 @@ let transcriptInterface = null
 const spirit = new MultiSequencer()
 const orgId = 'bdee032746'
 
+jQuery.fn.extend({
+    getMaxZ : function(){
+        return Math.max.apply(null, jQuery(this).map(function(){
+            var z
+            return isNaN(z = parseInt(jQuery(this).css("z-index"), 10)) ? 0 : z
+        }))
+    }
+})
+
 function debounce(func, limit = 300){
     var wait = false;                  // Initially, we're not waiting
     return function () {               // We return a throttled function
@@ -57,6 +66,14 @@ async function start() {
         //transcriptInterface.playTranscriptSegment($w.parent(), $w)
     })
     
+    const playPause = () => {
+        spirit.updateBPM(parseInt($('#bpm').val()))
+        $.each(stages, function (key, stage) {
+            stage.getCurrentSequence()
+        })
+        spirit.playPause()
+    }
+
     dropdown.change((e) => {
         transcriptInterface.$transcript.empty() 
         //transcriptInterface.loadTranscript(e.target.value, `transcripts/${e.target.value}.json`)
@@ -87,7 +104,11 @@ async function start() {
             const stage = stages[parseInt($('#stageChooser').val())]
             stage.$parent.parent().show()
             const h = stage.$parent.parent().find('.stage-title').text()
-            stage.$parent.parent().find('.stage-title').text(h + ' / ' + wordInfo.getHistory())
+            const nameAddition = wordInfo.getHistory() 
+            stage.$parent.parent().find('.stage-title').text(h + ' / ' + nameAddition)
+            if (h.length === 0) {
+                stage.sequencer.setName(nameAddition)
+            }
             $.each(transcriptInterface.$transcript.find('.w.selected:visible'), function(index, item) {
                 // $(item).clone().appendTo($('#stage')).removeClass('selected')
                 stage.addRenderedWord($(item).clone(true).off())
@@ -105,15 +126,16 @@ async function start() {
     $( ".videoContainer" ).each((i, v) => {
         buildStage($('#stages'), $( v ).find('video'))
         $( v ).drag()
-        //$( this ).hide()
+        $( v ).on('click', () => {
+            const zMax = $( ".videoContainer" ).getMaxZ()
+            if ($( v ).css("z-index")<zMax) {
+                $( v ).css("z-index", zMax+1)
+            }
+        })
     })
     //$('#interval').hide()
     $('#playButton').on('click', () => {
-        spirit.updateBPM(parseInt($('#bpm').val()))
-        $.each(stages, function (key, stage) {
-            stage.getCurrentSequence()
-        })
-        spirit.playOnBeat()
+        playPause()
     })
     $('#stopButton').on('click', () => {
         spirit.updateBPM(parseInt($('#bpm').val()))
@@ -148,9 +170,10 @@ async function start() {
                 const stage = stages[seqId]
                 if (Object.keys(seq.samples).length) {
                     stage.$parent.parent().show()
-                    $('#video-'+seqId).removeClass('enabled')
-                    $('#video-'+seqId).addClass('enabled')
-                    for (const samId of seq.sequence) {
+                    //$('#video-'+seqId).removeClass('enabled')
+                    //$('#video-'+seqId).addClass('enabled')
+                    const uSeq = seq.sequence.reduce((unique, item) => unique.includes(item) ? unique : [...unique, item], [])
+                    for (const samId of uSeq) {
                         const d = seq.samples[samId]
                         const $w = stage.makeWord(d).off()
                         stage.addRenderedWord($w)
@@ -159,7 +182,8 @@ async function start() {
                     stage.$parent.parent().find('.form-group input.volume').val(seq.volume)
                     if (seq.interval.endsWith('hz')) {
                         stage.$parent.parent().find('.form-group select.interval').val('custom wpm')
-                        stage.$parent.parent().find('.form-group select.customInterval').val(parseFloat(seq.interval.slice(0, -2))*60)
+                        stage.$parent.parent().find('.form-group input.customInterval').val(parseFloat(seq.interval.slice(0, -2))*60)
+                        stage.$parent.parent().find('.form-group input.customInterval').removeClass('u-none')
                     } else {
                         stage.$parent.parent().find('.form-group select.interval').val(seq.interval)
                     }
@@ -170,6 +194,14 @@ async function start() {
                     }
                     if (seq.pitch) {
                         stage.$parent.parent().find('.form-group input.pitch').val(seq.pitch)
+                    }
+                    if (seq.name) {
+                        stage.sequencer.setName(seq.name)
+                        stage.$parent.parent().find('.stage-title').text(seq.name)
+                    }
+                    if (seq.pattern) {
+                        stage.$parent.parent().find('.form-group input.pattern').val(seq.pattern)
+                        stage.sequencer.setPattern(seq.pattern)
                     }
                 }
             }
@@ -194,6 +226,27 @@ async function start() {
             $.each(stages, function (key, stage) {
                 stage.sequencer.useSampler('audio')
             })
+        }
+    })
+    // some other UI things
+    $(document).keydown(function(event) {
+        if (event.altKey)
+        {
+            if (event.which === 48) {
+                if ($('body').hasClass('expanded')) {
+                    $('body').toggleClass('simplified')
+                    event.preventDefault()
+                }
+            } else if (event.which === 49) {
+                const backgroundColors = ['bg-orange-300', 'bg-yellow-300', 'bg-pink-300', 'bg-red-300', 'bg-green-300', 'bg-teal-300', 'bg-indigo-300', 'bg-purple-300']
+                const curr = $('body').attr('class').split(/\s+/).filter(c => c.startsWith('bg-'))[0]
+                const next = backgroundColors[(backgroundColors.indexOf(curr) + 1) % backgroundColors.length]
+                $('body').addClass(next)
+                $('body').removeClass(curr)
+            } else if (event.which === 80) {
+                playPause()
+                event.preventDefault()
+            }
         }
     })
     $('#bpm').on('keypress', function (e) {

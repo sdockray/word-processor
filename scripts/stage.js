@@ -20,7 +20,7 @@ function buildStage($parent, $video) {
     $interval.change((e) => {
         stage.sequencer.setInterval(e.target.value, $offset.val())
     })
-    const $customInterval = $('<input>').addClass('offset form-group-input input-xsmall bg-gray-200 customInterval u-none').val("60")
+    const $customInterval = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 customInterval u-none').val("60")
     $customInterval.prop('type', 'number')
     const $offset = $('<input>').addClass('offset form-group-input input-xsmall bg-gray-200').val("0")
     $offset.prop('type', 'number')
@@ -30,6 +30,8 @@ function buildStage($parent, $video) {
     $intervalLabel.prop('data-tooltip', '4n is on the wpm beat')
     const $offsetLabel = $('<label>').addClass("tooltip form-group-label label-xsmall").text('offset')
     $offsetLabel.prop('data-tooltip', 'In milliseconds')
+    const $patternLabel = $('<label>').addClass("form-group-label label-xsmall pattern").text('pattern')
+    const $pattern = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 pattern').val("1111")
     const $volumeLabel = $('<label>').addClass("form-group-label label-xsmall volume").text('volume')
     const $volume = $('<input>').addClass('form-group-input input-xsmall bg-gray-200 volume').val("10")
     $volume.prop('type', 'number')
@@ -75,6 +77,13 @@ function buildStage($parent, $video) {
             $volume.attr("disabled", "disabled")
             stage.sequencer.setVolume(parseInt($volume.val()))
             $volume.removeAttr("disabled")
+        }
+    })
+    $pattern.on('keypress', function (e) {
+        if(e.which === 13){
+            $pattern.attr("disabled", "disabled")
+            stage.sequencer.setPattern($pattern.val())
+            $pattern.removeAttr("disabled")
         }
     })
     $rate.on('keypress', function (e) {
@@ -127,7 +136,17 @@ function buildStage($parent, $video) {
     thisWordInfo.startHistory('')
     $title.on('click', () => {
         const h = $title.text()
-        $title.text(h + ' / ' + thisWordInfo.getHistory())
+        $titleEdit = $('<input class="input-xsmall">').val(h)
+        $titleEdit.on('keypress', function (e) {
+            if(e.which === 13){
+                const name = $titleEdit.val()
+                $title.text(name)
+                stage.sequencer.setName(name)
+            }
+        })
+        $title.empty()
+        $title.append($titleEdit)
+        $titleEdit.focus()
     })
     $stage.on('wordSelected', (event, $w) => {
         setActiveInterface(stage)
@@ -146,6 +165,8 @@ function buildStage($parent, $video) {
         .append($customInterval)
         .append($offsetLabel)
         .append($offset)
+        .append($patternLabel)
+        .append($pattern)
         .append($rateLabel)
         .append($rate)
         //.append($pitchLabel)

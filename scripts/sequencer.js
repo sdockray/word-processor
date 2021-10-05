@@ -534,6 +534,7 @@ class VideoSampler extends Sampler {
 // Triggers samples in some kind of a sequence. Needs a sampler to start with.
 class Sequencer {
   constructor(sampler) {
+    this.name = ""
     this.audioSampler = new AudioSampler()
     this.videoSampler = new VideoSampler()
     this.sampler = this.audioSampler
@@ -547,6 +548,7 @@ class Sequencer {
     this.add = this.add.bind(this)
     this.set = this.set.bind(this)
     this.play = this.play.bind(this)
+    this.setPattern("1111") 
   }
 
   setVideoPlayer(videoPlayer) {
@@ -569,6 +571,10 @@ class Sequencer {
 
   add(sampleId) {
     this.sequence.push(sampleId)
+  }
+
+  setName(name) {
+    this.name = name
   }
 
   set(sampleIds) {
@@ -610,19 +616,30 @@ class Sequencer {
     this.sequenceIdx = 0
     console.log(`Sequencing at ${Tone.Transport.bpm.value} every ${this.interval} with offset ${this.offset}`)
     const eventId = Tone.Transport.scheduleRepeat((time) => {
-      setTimeout(() => {
-        that.sampler.play(that.sequence[that.sequenceIdx], () => {}, that.offset)
-        that.sequenceIdx = (that.sequenceIdx + 1) % that.sequence.length
-        if (!that.looping && that.sequenceIdx === 0) {
-          Tone.Transport.clear(eventId)
-        }
-      }, that.offset)
+      if (that.patternArr.length === 0 || that.patternArr[that.patternIdx]==="1") {
+        setTimeout(() => {
+          that.sampler.play(that.sequence[that.sequenceIdx], () => {}, that.offset)
+          that.sequenceIdx = (that.sequenceIdx + 1) % that.sequence.length
+          if (!that.looping && that.sequenceIdx === 0) {
+            Tone.Transport.clear(eventId)
+          }
+        }, that.offset)
+      } 
+      that.patternIdx = (that.patternIdx+1) % that.patternArr.length
     }, this.interval)    
   }
 
   setInterval(interval, offset=0) {
     this.interval = interval
     this.offset = parseFloat(offset)
+  }
+
+  setPattern(pattern) {
+    if (/^[01]+$/.test(pattern)) {
+      this.pattern = pattern
+      this.patternArr = this.pattern.split('')
+      this.patternIdx = 0
+    }
   }
 
   setVolume(volume) {
@@ -659,6 +676,8 @@ class Sequencer {
 
   export() {
     return {
+      name: this.name,
+      pattern: this.pattern,
       interval: this.interval,
       offset: this.offset,
       volume: this.sampler.volume,
@@ -679,6 +698,14 @@ class MultiSequencer {
 
   addSequencer(s) {
     this.sequencers.push(s)
+  }
+
+  playPause() {
+    if (Tone.Transport.state == "started") {
+      this.pause()
+    } else {
+      this.playOnBeat()
+    }
   }
 
   pause() {

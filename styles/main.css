@@ -35,12 +35,6 @@ h6.label {
   border-bottom: 1px dashed gray;
 }
 
-#stages .stage.resizable {
-  resize: both;
-  overflow: scroll;
-  border: 1px solid black;
-}
-
 #stages .stage .words {
   max-height: 200px;
   overflow-x: auto;
@@ -70,12 +64,40 @@ body #downloadSequencers {
   display: none;
 }
 
+body #stages .stage .stage-title {
+  padding-left: 15px;
+}
+
 body.expanded #stages .stage .form-group button {
   display: block;
 }
 
 body #stages .stage .form-group button {
   display: none;
+}
+
+body.expanded.simplified #rightSide,
+body.expanded.simplified #playControls,
+body.expanded.simplified label[for=loadComposition] {
+  visibility: hidden;
+}
+
+body.expanded.simplified #stages .stage {
+  resize: vertical;
+  overflow-y: auto;
+  border: 1px solid black;
+}
+
+body.expanded.simplified #leftSide h6,
+body.expanded.simplified #stages .stage > .form-group
+{
+  display: none;
+}
+
+body.expanded.simplified #stages .stage .words {
+  font-size: larger;
+  padding: 15px;
+  max-height: 1600px;
 }
 
 .videoContainer {
