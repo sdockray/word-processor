@@ -25,8 +25,8 @@ function debounce(func, limit = 300){
     }
 }
 
-async function loadTranscriptList() {
-    return $.getJSON( "/userdb").then( data => {
+async function loadTranscriptList(uri, params={}) {
+    return $.getJSON( uri, params).then( data => {
         let transcriptData = {}
         $.each( data['db']['doc'], function( key, val ) {
             transcriptData[key] = val['title']
@@ -49,7 +49,11 @@ async function start() {
     let dropdown = $('#transcriptChooser')
     dropdown.empty()
     dropdown.append('<option selected="true" disabled>load a transcript</option>')
-    loadTranscriptList().then(transcriptData => {
+    loadTranscriptList("/userdb").then(transcriptData => {
+        return transcriptData
+    }, reason => {
+        return loadTranscriptList("/projectdb", {project: "997b0619ca"})
+    }).then(transcriptData => {
         $.each(transcriptData, function (key, entry) {
             dropdown.append($('<option></option>').attr('value', key).text(entry))
         })
@@ -267,6 +271,21 @@ async function start() {
                 $('.stage .w').css('margin-right', 20 * 60 / bpm  +'px')
             }
             //Enable the textbox again if needed.
+            $(this).removeAttr("disabled")
+            if (bpm === 0) {
+                $('#crossfade').removeClass('u-none')
+                $('#crossfade').next('label').removeClass('u-none')
+            } else {
+                $('#crossfade').addClass('u-none')
+                $('#crossfade').next('label').addClass('u-none')
+            }
+        }
+    })
+    $('#crossfade').on('keypress', (e) => {
+        if(e.which === 13){
+            const cf = parseInt($('#crossfade').val())
+            $(this).attr("disabled", "disabled")
+            spirit.updateCrossfade(cf)
             $(this).removeAttr("disabled")
         }
     })

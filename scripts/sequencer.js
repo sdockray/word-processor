@@ -169,6 +169,10 @@ class AudioSample {
     this.tellEleAboutFeatures()
   }
 
+  getDuration() {
+    return (this.duration>0) ? this.duration : this.$ele.data('end') - this.$ele.data('start')
+  }
+
   setSpan(start, duration) {
     this.start = start
     this.duration = duration
@@ -203,7 +207,7 @@ class AudioSample {
     } 
   }
 
-  play(onstop) {
+  play(onstop, startAt="0") {
     // this.samples[idx].playbackRate = 1.75;
     //console.log(this.label, onstop)
     if (onstop) {
@@ -221,10 +225,10 @@ class AudioSample {
     this.player.playbackRate = this.playbackRate
     //this.player.detune = this.pitch
     if (this.start>=0 && this.duration>=0) {
-      this.player.start("0.05", this.start + .05, this.duration)
+      this.player.start(startAt, this.start + .05, this.duration)
       //this.player.start(0, this.start, this.duration)
     } else {
-      this.player.start("0.05")
+      this.player.start(startAt)
       //this.player.start()
     }
   }
@@ -304,6 +308,10 @@ class VideoSample {
     // nop. can't set volume on videos
   }
 
+  getDuration() {
+    return (this.duration>0) ? this.duration : this.$ele.data('end') - this.$ele.data('start')
+  }
+  
   loop(stop) {
     this.loop = !stop
   }
@@ -361,9 +369,13 @@ class Sampler {
     this.samples[idx].loop(stop)
   }
 
-  play(idx, onstop) {
+  getSampleDuration(idx) {
+    return (this.samples.hasOwnProperty(idx)) ? this.samples[idx].getDuration() : 0
+  }
+
+  play(idx, onstop, startAt="0") {
     if (this.samples.hasOwnProperty(idx)) {
-      this.samples[idx].play(onstop)
+      this.samples[idx].play(onstop, startAt)
     } else {
       //console.log(this.samples)
       if (onstop) {
@@ -542,6 +554,7 @@ class Sequencer {
     this.sequenceIdx = 0
     this.interval = "4n"
     this.offset = 0
+    this.crossfade = 0
     this.looping = true
     this.sequencing = false
     this.transportOffsetTime = 0
@@ -588,6 +601,25 @@ class Sequencer {
     }
   }
 
+  setCrossfade(crossfade) {
+    this.crossfade = crossfade
+  }
+
+  crossfadeNext(i, localOffset=0) {
+    if (i===0 || Tone.Transport.state == "started") {
+      setTimeout(() => {
+        this.sampler.play(this.sequence[i], ()=>{})
+        const sampleDur = this.sampler.getSampleDuration(this.sequence[i])*1000 
+        const dur = sampleDur - this.crossfade
+        if (i < this.sequence.length) {
+          this.crossfadeNext(i+1, Math.max(0.05, dur))
+        } else if (this.sequence.length && this.looping) {
+          this.crossfadeNext(0, 1000)
+        }
+      }, localOffset + this.offset)
+    }
+  }
+
   playNext(i) {
     if (i===0 || Tone.Transport.state == "started") {
       setTimeout(() => {
@@ -604,7 +636,8 @@ class Sequencer {
   }
 
   play() {
-    this.playNext(0)
+    //this.playNext(0)
+    this.crossfadeNext(0)
   }
 
   startInterval() {
@@ -694,6 +727,7 @@ class Sequencer {
 class MultiSequencer {
   constructor() {
     this.sequencers = []
+    this.crossfade = 0
   }
 
   addSequencer(s) {
@@ -732,23 +766,30 @@ class MultiSequencer {
     if (prevBpm != bpm) {
       console.log("Setting bpm to:", bpm)
       Tone.Transport.bpm.value = bpm
-      /* // doesnt work yet
-      if (prevBpm===0 || bpm===0) {
-        this.pause()
-        this.playOnBeat()
+    }
+  }
+
+  updateCrossfade(crossfade) {
+    if (crossfade != this.crossfade) {
+      this.crossfade = crossfade
+      for (const s of this.sequencers) {
+        s.setCrossfade(crossfade)
       }
-      */
     }
   }
 
   load(data) {
     this.updateBPM(data.bpm)
+    if (data.crossfade) {
+      this.updateCrossfade(data.crossfade)
+    }
   }
 
   // export for saving
   export() {
     let data = {
       bpm: Tone.Transport.bpm.value,
+      crossfade: this.crossfade,
       sequencers: []
     }
     for (const s of this.sequencers) {
