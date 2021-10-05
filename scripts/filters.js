@@ -159,7 +159,7 @@ class WordInfoInterface {
         this.$info.find('.info_length > td').text(length)
         this.$info.find('.info_duration > td').text(duration.toFixed(3))
         this.$info.find('.info_time > td').text($ele.data('start').toFixed(2) + 's')
-        this.$info.find('.info_time2 > td').text($ele.data('start2').toFixed(2) + 's')
+        this.$info.find('.info_time2 > td').text($ele.data('start2').toFixed(2) + 's (#' + $ele.data('sidx') + ')')
         this.$info.find('.info_syllables > td').text(sylls.length)
         this.$info.find('.info_syllableLengths > td').text(syllDurs.join(', '))
         this.$info.find('.info_syllableSpeed > td').text((sylls.length/duration).toFixed(3) + " /s")
@@ -186,7 +186,7 @@ class WordInfoInterface {
         this.handleLength(length)
         this.handlePhones(phones, $ele)
         this.handleSyllables(sylls, syllDurs, $ele)
-        this.handleTime($ele.data('start').toFixed(2), $ele.data('start2').toFixed(2))
+        this.handleTime($ele.data('start').toFixed(2), $ele.data('start2').toFixed(2), $ele.data('sidx'))
         this.handlePos($ele.data('pos'))
         this.handleLetters(counts.join(', '))
     }
@@ -253,13 +253,14 @@ class WordInfoInterface {
         })        
     }
 
-    handleTime(s1, s2){
+    handleTime(s1, s2, s3){
         this.$info.find('.info_time,.info_time2').on('click', () => {
             this.openModal()
             const $mEle = $('#filter-modal .modal-body .time')
             $mEle.show()
             $mEle.find('.global input').val(s1)
             $mEle.find('.local input').val(s2)
+            $mEle.find('.position input').val(s3)
             $mEle.find('.global button.before').on('click', () => {
                 const opt = $mEle.find('.global input').val()
                 this.history.filters.push(`before ${$mEle.find('input').val()}`)
@@ -288,6 +289,20 @@ class WordInfoInterface {
                     return word.data('start2') >= parseFloat(opt)
                 }, true, this.getLeadingTrailing())
             })
+            $mEle.find('.position button.before').on('click', () => {
+                const opt = $mEle.find('.position input').val()
+                this.history.filters.push(`before position ${$mEle.find('input').val()} in each sentence`)
+                this.words.filter((word) => {
+                    return word.data('sidx') <= parseInt(opt)
+                }, true, this.getLeadingTrailing())
+            })
+            $mEle.find('.position button.after').on('click', () => {
+                const opt = $mEle.find('.position input').val()
+                this.history.filters.push(`after position ${$mEle.find('input').val()} in each sentence`)
+                this.words.filter((word) => {
+                    return word.data('sidx') >= parseInt(opt)
+                }, true, this.getLeadingTrailing())
+            })
             $mEle.find('button.chron').on('click', () => {
                 this.history.sort.push(`sorted by original time`)
                 this.words.sort((a, b) => {
@@ -310,6 +325,18 @@ class WordInfoInterface {
                 this.history.sort.push(`reverse sorted by time in sentence`)
                 this.words.sort((a, b) => {
                     return a.data('start2') < b.data('start2')
+                })
+            })
+            $mEle.find('button.chron3').on('click', () => {
+                this.history.sort.push(`sorted by position in sentence`)
+                this.words.sort((a, b) => {
+                    return a.data('sidx') > b.data('sidx')
+                })
+            })
+            $mEle.find('button.r-chron3').on('click', () => {
+                this.history.sort.push(`reverse sorted by position in sentence`)
+                this.words.sort((a, b) => {
+                    return a.data('sidx') < b.data('sidx')
                 })
             })
         })

@@ -629,7 +629,8 @@ class TranscriptInterface {
         const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ]/g
         const pos = await cheap_nlp(wdlist.map(w => w.word).join(''))
         let idx = 0
-        let sidx = 0
+        let sidx = 1
+        let sentStart = segment.start
         let lastEnd = segment.start
         for (let wd of wdlist) {
             // console.log(wd)
@@ -640,8 +641,8 @@ class TranscriptInterface {
                     display: cleanWord,
                     start: lastEnd,
                     end: wd.start,
-                    start2: wd.start - segment.start,
-                    sidx: idx - sidx,
+                    start2: wd.start - sentStart,
+                    sidx: sidx,
                     word: cleanWord,
                     oWord: false,
                     phones: [],
@@ -658,8 +659,8 @@ class TranscriptInterface {
                 display: wd.word,
                 start: wd.start,
                 end: wd.end,
-                start2: wd.start - segment.start,
-                sidx: idx - sidx,
+                start2: wd.start - sentStart,
+                sidx: sidx,
                 word: cleanWord,
                 oWord: wd.word,
                 phones: wd.phones,
@@ -667,11 +668,13 @@ class TranscriptInterface {
                 docId: this.transcript.docId,
                 pos: (idx < pos.length && pos[idx].hasOwnProperty(cleanWord)) ? pos[idx][cleanWord] : []
             })
+            sidx += 1
             $parent.append($w)
             const lastLetter = wd.word.charAt(wd.word.length - 2)
             if (lastLetter=='.' || lastLetter=='?' || lastLetter=='!') {
                 idx += 1
-                sidx = idx
+                sidx = 1
+                sentStart = wd.end
             }
         }
     }
