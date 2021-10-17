@@ -100,6 +100,37 @@ body.expanded.simplified #stages .stage .words {
   max-height: 1600px;
 }
 
+body.expanded.simplified #stages .stage.s-0 .words {
+  font-size: larger;
+}
+body.expanded.simplified #stages .stage.s-1 .words {
+  font-size: 20px;
+}
+body.expanded.simplified #stages .stage.s-2 .words {
+  font-size: 30px;
+}
+body.expanded.simplified #stages .stage.s-3 .words {
+  font-size: 40px;
+}
+body.expanded.simplified #stages .stage.s-4 .words {
+  font-size: 50px;
+}
+body.expanded.simplified #stages .stage.s-5 .words {
+  font-size: 60px;
+}
+body.expanded.simplified #stages .stage.s-6 .words {
+  font-size: 80px;
+}
+body.expanded.simplified #stages .stage.s-7 .words {
+  font-size: 100px;
+}
+body.expanded.simplified #stages .stage.s-8 .words {
+  font-size: 120px;
+}
+body.expanded.simplified #stages .stage.s-9 .words {
+  font-size: 150px;
+}
+
 .videoContainer {
   resize: both;
   display: none;
@@ -152,6 +183,14 @@ body.expanded.simplified #stages .stage .words {
   opacity: 1;
 }
 
+body.expanded.simplified.show-playing .stage .w {
+  display:hidden;
+}
+
+body.expanded.simplified.show-playing .stage .w.playing {
+  display:inline-block;
+}
+
 .stage .w.v-loaded {
   border-bottom: 1px solid yellow;
 }
@@ -177,3 +216,12 @@ body.expanded.simplified #stages .stage .words {
   display: inline-block;
   overflow: hidden;
   cursor: pointer;
+}
+
+#clippy {
+  position: absolute;
+  right: 50px;
+  bottom: 50px;
+  width: 140px;
+  transform: rotate(300deg);
+}

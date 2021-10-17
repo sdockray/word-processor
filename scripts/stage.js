@@ -44,6 +44,7 @@ function buildStage($parent, $video) {
     $pitch.prop('type', 'number')
     const $playTrackButton = $("<button>").addClass("form-group-btn btn-xsmall btn-primary bg-gray-700").html('&#9658;')
     const $loopButton = $("<button>").addClass("form-group-btn btn-xsmall bg-green-500").html('loop')
+    const $rmButton = $("<button>").addClass("form-group-btn btn-xsmall bg-red-700").html('x')
     
     const setIntervalOffset = (intervalVal, offsetVal) => {
             //Disable textbox to prevent multiple submit
@@ -155,6 +156,10 @@ function buildStage($parent, $video) {
     $unlock.on('click', () => {
         $stageContainer.addClass('resizable')
     })
+    $rmButton.on('click', () => {
+        $title.empty()
+        stage.empty()
+    })
     $intervalOffsetContainer = $('<div>').addClass('form-group')
         .append($downloadButton)
         .append($volumeLabel)
@@ -173,6 +178,7 @@ function buildStage($parent, $video) {
         //.append($pitch)
         .append($playTrackButton)
         .append($loopButton)
+        .append($rmButton)
     //$stageContainer.append($unlock).append($title).append($stage).append($intervalOffsetContainer)
     $stageContainer.append($title).append($stage).append($intervalOffsetContainer)
     $parent.append($stageContainer)

@@ -588,6 +588,10 @@ class WordInfoInterface {
                 this.history.filters.push(`removing "${$mEle.find('input').val()}"`)
                 filterFunc($mEle.find('input').val(), false)
             })
+            $mEle.find('button.noun-phrases').on('click', () => {
+                this.history.filters.push(`keeping noun phrases`)
+                this.words.filterNounPhrases()
+            })
         })
     }    
 

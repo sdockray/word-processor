@@ -246,6 +246,13 @@ class TranscriptInterface {
             this.$audio.get(0).pause()
             this.getCurrentSequence(false)
         })
+        // need to keep this globally
+        this.nounPhrases = []
+    }
+
+    empty() {
+        this.$transcript.empty()
+        this.sequencer.empty()
     }
 
     inventPhrase(phrase) {
@@ -385,7 +392,8 @@ class TranscriptInterface {
         }
     }
 
-    makePhrase($words) {
+    makePhrase($wordsIn) {
+        const $words = $wordsIn.filter(word => word.data() !== null).filter(word => !word.data('pos').includes('Sound'))
         const end = $words[$words.length - 1].data('end')
         const allWords = $words.map(x => x.text()).join('')
         const allWords2 = $words.map(x => x.data('word')).join(' ')
@@ -465,13 +473,40 @@ class TranscriptInterface {
         }
     }
 
+    removeUnselectedWords(words) {
+        let speed = Math.round(2000/words.length)+2
+        $.each(words, function (index, item) {
+            if (!$(item).hasClass('select')) {
+                if (index<200) {
+                    setTimeout(() => {
+                        $(item).fadeOut("slow")
+                        //$(item).wrap('<del/>')
+                    }, index*speed)
+                } else {
+                    $(item).hide()
+                }
+            } else {
+                if (index<200) {
+                    setTimeout(() => {
+                        $(item).removeClass('select')
+                        $(item).addClass('selected')
+                        //$(item).wrap('<mark/>')
+                        //that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
+                    }, index*speed)
+                } else {
+                    $(item).removeClass('select')
+                    $(item).addClass('selected')
+                }
+            }
+        })
+    }
+
     filter(filterFunc, keep=1, leadingTrailing=[0,0]) {
         if (!this.isActive) {
             return false
         }
         const tn = Date.now()
         const visibleWords = this.$transcript.find('.w:visible')
-        let speed = Math.round(2000/visibleWords.length)+2
         // const speed = 2
         const that = this
         let phrases = []
@@ -509,34 +544,20 @@ class TranscriptInterface {
                 }
             }
         })
-        $.each(visibleWords, function (index, item) {
-            if (!$(item).hasClass('select')) {
-                if (index<200) {
-                    setTimeout(() => {
-                        $(item).fadeOut("slow")
-                        //$(item).wrap('<del/>')
-                    }, index*speed)
-                } else {
-                    $(item).hide()
-                }
-            } else {
-                if (index<200) {
-                    setTimeout(() => {
-                        $(item).removeClass('select')
-                        $(item).addClass('selected')
-                        //$(item).wrap('<mark/>')
-                        //that.transcript.loadAudio(that.sequencer.sampler, $(item).data('docId'), $(item).data('mediaId'), $(item).data('start'), $(item).data('end')).then(sample => sample.play())
-                    }, index*speed)
-                } else {
-                    $(item).removeClass('select')
-                    $(item).addClass('selected')
-                }
-            }
-        })
+        this.removeUnselectedWords(visibleWords)
         $.each(phrases, function (index, item) {
             that.makePhrase(item)
         })
         this.$transcript.trigger("sequenceUpdated")
+    }
+
+    filterNounPhrases() {
+        const visibleWords = this.$transcript.find('.w:visible')
+        $.each(this.nounPhrases, function (index, item) {
+            $.each(item, (index, $w) => $w.addClass('select'))
+        })
+        this.removeUnselectedWords(visibleWords)
+        $.each(this.nounPhrases, (index, item) => this.makePhrase(item))
     }
 
     sort(sortFunc) {
@@ -627,11 +648,13 @@ class TranscriptInterface {
     async renderWords(wdlist, segment, $parent) {
         const that = this
         const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ]/g
-        const pos = await cheap_nlp(wdlist.map(w => w.word).join(''))
+        const [pos, nps] = await cheap_nlp(wdlist.map(w => w.word).join(''))
         let idx = 0
         let sidx = 1
         let sentStart = segment.start
         let lastEnd = segment.start
+        let currNP = []
+        let npIdx = 0
         for (let wd of wdlist) {
             // console.log(wd)
             // Add a sound if the gap is longer than a second
@@ -670,6 +693,16 @@ class TranscriptInterface {
             })
             sidx += 1
             $parent.append($w)
+            if (nps.length>0 && npIdx<nps.length && nps[npIdx][currNP.length]===wd.word.trim()) {
+                currNP.push($w)
+                if (currNP.length === nps[npIdx].length) {
+                    this.nounPhrases.push(currNP)
+                    currNP = []
+                    npIdx += 1
+                }
+            } else if (currNP.length>0) {
+                currNP = []
+            }
             const lastLetter = wd.word.charAt(wd.word.length - 2)
             if (lastLetter=='.' || lastLetter=='?' || lastLetter=='!') {
                 idx += 1
@@ -680,6 +713,7 @@ class TranscriptInterface {
     }
 
     async render() {
+        this.nounPhrases = []
         const renderSegment = (s, sidx) => {
             const $p = $("<p>").data({ id: sidx })
             this.renderWords(s.wdlist, s, $p)
@@ -727,7 +761,8 @@ class TranscriptInterface {
 }
 
 async function cheap_nlp(sentence) {
+    const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ]/g
     let doc = nlp(sentence)
-    return doc.out('tags')
-    // console.log(doc.nouns().list.map(a => a.text()))
+    //console.log(doc.nouns().list.map(a => a.text()).filter(a => a.indexOf(' ') < a.length-1))
+    return [doc.out('tags'), doc.nouns().list.filter(a => a.length>1).map(a => a.text().trim().split(' '))]
 }

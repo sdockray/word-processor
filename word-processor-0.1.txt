@@ -1,0 +1,227 @@
+link: http://instrument.machinelistening.exposed (only works in Firefox!)
+
+
+ ▄ ▄   ████▄ █▄▄▄▄ ██▄       █ ▄▄  █▄▄▄▄ ████▄ ▄█▄    ▄███▄     ▄▄▄▄▄    ▄▄▄▄▄   ████▄ █▄▄▄▄ 
+ █   █  █   █ █  ▄▀ █  █      █   █ █  ▄▀ █   █ █▀ ▀▄  █▀   ▀   █     ▀▄ █     ▀▄ █   █ █  ▄▀ 
+█ ▄   █ █   █ █▀▀▌  █   █     █▀▀▀  █▀▀▌  █   █ █   ▀  ██▄▄   ▄  ▀▀▀▀▄ ▄  ▀▀▀▀▄   █   █ █▀▀▌  
+█  █  █ ▀████ █  █  █  █      █     █  █  ▀████ █▄  ▄▀ █▄   ▄▀ ▀▄▄▄▄▀   ▀▄▄▄▄▀    ▀████ █  █  
+ █ █ █          █   ███▀       █      █         ▀███▀  ▀███▀                              █   
+  ▀ ▀          ▀                ▀    ▀                                                   ▀    
+                                                                                              
+
+WORD PROCESSOR is a (de)compositional tool for transcribed audio/video. 
+
+It is an instrument: 
+- in the sense of both a thing you play with to make sounds
+- and also a forensic device for machine listening
+
+
+When you open WORD PROCESSOR the screen is split into 3 parts
+-------------------------------------------------------------
+PLAYER | TRANSCRIPT  | EXTRACT 
+
+
+In general, this is what you will do when working with WORD PROCESSOR
+---------------------------------------------------------------------
+1. 	You will select a TRANSCRIPT to load. 
+2. 	Then, click on a word or highlight a phrase. This will show metadata EXTRACTED from that word.
+3. 	You can click on one of those properties to open a window that will allow you to "filter" and "sort".
+	Filtering and sorting will reduce and reorganize the transcript according to extractive machinic logic.
+4. 	By clicking the *scissors* icon at the top of TRANSCRIPT, the selected pieces will move to the PLAYER.
+5.	You can play the audio or video of the resequenced words in the PLAYER.
+	You can select words and do perform filtering and sorting. 
+	You can adjust the volume, timing, and playback rate of the audio.
+
+
+After selecting a transcript to load...
+---------------------------------------
+
+CLICK ON A WORD to select and unselect it.
+	- this will select and unselect it. Metadata extracted from the last selected word will appear.
+HIGHLIGHT A PHRASE
+	- each word is selected individually, but you can "Make Phrase" which will glue the words together in filtering and sorting
+	- facilitates multiple word part of speech filtering (see below)
+
+Across the top of the TRANSCRIPT area:
+
+* Reload Button: Reloads the currently loaded transcript after filtering and sorting
+* Star button: Selects (andunselects) all of the words in the transcript view
+* Number select: There are up to 6 PLAYERS you can send selected words to
+* Scissors button: This will cut out the selected words from the transcript and send them to one of the PLAYERS
+
+
+Here is a list of currently available filters and sorts (available via EXTRACT)
+-------------------------------------------------------------------------------
+
+CLICK ON THE WORD AT THE TOP
+* filter by word: keep or remove certain words
+	- you can separate multiple words with commas
+	- you can do partial words with a hyphen, eg. "trans-" matches "transcribe" and "transition"
+	- you could keep only stopwords (see Appendix) for instance
+* filter most common N words: enter a number
+* sort alphabetically: self-explanatory
+
+CLICK ON LENGTH
+* filter by number of letters in a word: keeps longer words, shorter words, same length words
+* sort by the number of letters in a word
+
+CLICK ON DURATION
+* filter by the temporal duration of a word: keeps longer words, shorter words, roughly same length words
+	- sometimes removing words less than about 0.2s helps things sound better
+* sort by the temporal duration of words
+
+CLICK ON TIME:
+* filter by time across whole transcript: remove all words before or after a certain time
+	- for example, to remove an introduction to a lecture
+* filter within each sentence: remove all words before or after a certain time within each sentence
+	- for example, if you were only interested in the first 2 seconds of each sentence
+* filter by position within each sentence: position of the word within the sentence
+	- for example, if you wanted to filter for the first 3 words of each sentence
+* sort by each of the 3 above dimensions:
+	- chronologically is the original order of the words
+	- chronological in each sentence is a measure of each word from the start of the sentence it is in
+	- by position of the word in the sentence is 1st word (in its sentence), 2nd word, 3rd word, etc.
+
+CLICK ON SYLLABLES:
+* filter by the number of syllables in a word
+	- for example, keep all the 5 syllable words, or all the words with more than 4 syllables
+* filter by the position of the stressed syllable
+	- is the stressed syllable the first syllable, the last syllable, or at a position (eg. the 3rd)
+* extract syllables from words
+	- keeps certain syllables from all visible words
+	- this is non-destructive. If you choose "reset" it will go back to the original word.
+	- keep the first or last 1,2,3, etc. syllables
+	- keep 1,2,3 etc. syllables starting from the 1st, 2nd, etc. syllable
+	- Extraction can apply to only the selected word ("this") or "all" words in the transcript or player
+* sort fast to slow words and slow to fast words
+	- word speed is a measure of syllables per second
+
+CLICK ON PHONEMES:
+* filter by a phoneme or sequence of phonemes
+	- the phonemes of the selected word will pre-fill this input to help. you will probably delete some before filtering
+	- the phoneme sequence is a comma-separated list of individual phonemes
+	- keep words starting with or ending with a certain sequence of phonemes, or which include that sequence anywhere in the word
+	- this is useful for filtering for words containing a sound, for example rhyming
+* extract phonemes from words
+	- keeps certain phonemes from all visible words
+	- this is non-destructive. If you choose "reset" it will go back to the original word.
+	- keep the first or last 1,2,3, etc. phonemes
+	- keep 1,2,3 etc. phonemes starting from the 1st, 2nd, etc. phoneme
+	- Extraction can apply to only the selected word ("this") or "all" words in the transcript or player
+* monster: create words or short phrases from custom phoneme sequences
+	- you probably can't write in phonemes, so click on the "CMU Dict" link to convert words to phonemes
+	- for example, "some words" becomes "S AH M . W ER D Z ." which you copy and paste into monster
+	- after creating the new word or phrase, it will appear selected in the TRANSCRIPT
+
+CLICK ON POS (PART OF SPEECH):
+* Parts of Speech pattern: keeps or removes words or sequences of words
+	- the currently selected word's parts of speech are pre-filled
+	- filtering by comma-separated parts of speech is an OR operation ("#Verb,#PresentTense" = Verb OR PresentTense)
+	- filtering by parts of speech separated by + sign is an AND operation ("#Verb+#PresentTense" = only PresentTense Verbs)
+	- a pattern spanning multiple words can be created with spaces ("#Adjective #Noun" looks for adjective followed by a noun)
+	- a word can be included in the pattern (for example: "you can #Verb" would match "you can go" and "you can stay")
+	- if you highlight a phrase in TRANSCRIPT, the part of speech pattern to match that phrase will be pre-filled
+	- all matches will automatically be converted to phrases (i.e. words that stay together in further filters or sorts)
+* Noun Phrases:
+	- only works on a fully loaded TRANSCRIPT
+	- keeps multiword noun phrases
+
+CLICK ON LETTERS:
+* filter by which letters and (at least) how many of them in a word
+	- the format is letter followed by the minimum occurrences of the letter in the matched word (eg, a:2 means at least 2 a's)
+	- the letter count for a selected word will be prefilled
+
+
+Context
+-------
+
+Almost all filters will find single words, but allow you to "include words before and after", or context.
+For example, 2 words before and 2 words after would result in mostly 5 word phrases. However, if the sentence
+ends in this window, then words from the neighboring sentence will not be returned.
+
+
+Here is a list of options for controlling tracks in the PLAYER
+--------------------------------------------------------------
+
+Across the top you will see:
+
+* Play button
+* Stop button
+* wpm: The words (or phrases) will be played back at a rate of this many words per minute
+	- press Enter after changing the number
+	- 0 means each word plays immediately when the previous one stops
+	- Switching between 0 and a number (or vice versa) requires stopping and starting.
+* crossfade: Only appears when wpm is 0. Causes next sample to start playing slightly before previous one ends.
+	- crossfade is a number in milliseconds
+* V button: Switches into video mode. To get back to audio, shrink and expand the PLAYER.
+* DL button: Download the composition as a .json file. This can be loaded in "load a saved composition" 
+* Expand button: Shrinks or expands the PLAYER area
+
+In each track:
+
+* Title: Click on this to enter change text to display as a title for this track
+* DL button: Not working properly. The idea is you can download an audio file of this track.
+* Volume: Volume of this track.
+	- Range is roughly -50 to 50
+* Mute button: Sets the volume to a very low value
+* Interval: How often the words in this track play relative to the wpm
+	- 4n means each word plays on the beat specified by wpm.
+	- 2n is twice as slow, 8n is twice as fast
+	- custom wpm: plays this track at its own independent wpm
+* Offset: A delay in beginning to play each word
+	- Offset is a number in milliseconds
+* Pattern: A pattern representing words being played or an extra pause being included
+	- 1's represent play, 0's represent pause
+	- 0 (pause) doesn't mean to skip a word, but to pause a (wpm) beat before playing it
+	- The pattern can be as long as you want it to be
+* Rate: The speed relative to the original sample (.9 is 90% as fast)
+	- Rate also changes the pitch
+* Play button: Starts another playhead
+* Loop button: By default the playhead loops back to the start. This can be disabled.
+* X button: Removes all samples from the track
+
+
+===
+
+Appendix
+--------
+
+KEYBOARD SHORTCUTS (all while holding down the "Alt" or "Option" key)
+
+0 : enable/ disable a minimal player view
+p : play or pause
+1 : cycle through some background colors
+2 : only display the words that are playing (in minimal view)
+- : reduce word size (in minimal view)
+= : increase word size
+↑ : choose a higher track to adjust word size
+↓ : choose a lower track to adjust word size
+
+
+STOPWORDS (NLTK)
+These are words that are often discarded by algorithms trying to extract meaning and value from text.
+In other words, they are words assumed to have little to no value:
+
+ourselves, hers, between, yourself, but, again, there, about, once, during, out, very, having, with, they, 
+own, an, be, some, for, do, its, yours, such, into, of, most, itself, other, off, is, s, am, or, who, as, 
+from, him, each, the, themselves, until, below, are, we, these, your, his, through, don, nor, me, were, her, 
+more, himself, this, down, should, our, their, while, above, both, up, to, ours, had, she, all, no, when, at, 
+any, before, them, same, and, been, have, in, will, on, does, yourselves, then, that, because, what, over, why, 
+so, can, did, not, now, under, he, you, herself, has, just, where, too, only, myself, which, those, i, after, 
+few, whom, t, being, if, theirs, my, against, a, by, doing, it, how, further, was, here, than
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

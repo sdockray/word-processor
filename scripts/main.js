@@ -35,6 +35,68 @@ async function loadTranscriptList(uri, params={}) {
     })
 }
 
+function loadJSONComposition(data) {
+    $('#playControls').show()
+    spirit.load(data)
+    $('#bpm').val(data.bpm)
+    if (data.crossfade) {
+        $('#crossfade').val(data.crossfade)
+    }
+    for (const [seqId, seq] of data.sequencers.entries()) {
+        const stage = stages[seqId]
+        if (Object.keys(seq.samples).length) {
+            stage.$parent.parent().show()
+            //$('#video-'+seqId).removeClass('enabled')
+            //$('#video-'+seqId).addClass('enabled')
+            const uSeq = seq.sequence.reduce((unique, item) => unique.includes(item) ? unique : [...unique, item], [])
+            for (const samId of uSeq) {
+                const d = seq.samples[samId]
+                const $w = stage.makeWord(d).off()
+                stage.addRenderedWord($w)
+            }
+            stage.sequencer.load(seq)
+            stage.$parent.parent().find('.form-group input.volume').val(seq.volume)
+            if (seq.interval.endsWith('hz')) {
+                stage.$parent.parent().find('.form-group select.interval').val('custom wpm')
+                stage.$parent.parent().find('.form-group input.customInterval').val(parseFloat(seq.interval.slice(0, -2))*60)
+                stage.$parent.parent().find('.form-group input.customInterval').removeClass('u-none')
+            } else {
+                stage.$parent.parent().find('.form-group select.interval').val(seq.interval)
+            }
+            stage.$parent.parent().find('.form-group input.offset').val(seq.offset)
+            stage.sequencer.setInterval(seq.interval, seq.offset)
+            if (seq.rate) {
+                stage.sequencer.setRate(seq.rate)
+                stage.$parent.parent().find('.form-group input.rate').val(seq.rate)
+            }
+            if (seq.pitch) {
+                stage.$parent.parent().find('.form-group input.pitch').val(seq.pitch)
+            }
+            if (seq.name) {
+                stage.sequencer.setName(seq.name)
+                stage.$parent.parent().find('.stage-title').text(seq.name)
+            }
+            if (seq.pattern) {
+                stage.$parent.parent().find('.form-group input.pattern').val(seq.pattern)
+                stage.sequencer.setPattern(seq.pattern)
+            }
+        }
+    }
+    $('#expandButton').click()
+}
+
+
+async function loadRemoteComposition() {
+    // check for loading a json file
+    const hash = window.location.hash.substr(1)
+    if (hash.length && hash.replace(/^.*\./, '') === 'json') {
+        const uri = 'https://gist.githubusercontent.com/' + hash
+        return $.getJSON( uri, {'callback' : '?'} ).then( data => {
+            loadJSONComposition(data)
+        })
+    }
+}
+
 
 function setActiveInterface(t) {
     transcriptInterface.isActive = false
@@ -44,7 +106,9 @@ function setActiveInterface(t) {
     t.isActive = true
 }
 
+
 async function start() {
+    loadRemoteComposition()
     // Set up the transcript chooser
     let dropdown = $('#transcriptChooser')
     dropdown.empty()
@@ -167,48 +231,7 @@ async function start() {
         const reader = new FileReader()
         reader.addEventListener('load', (e) => {
             const data = JSON.parse(e.target.result)
-            $('#playControls').show()
-            //spirit.load(data)
-            $('#bpm').val(data.bpm)
-            for (const [seqId, seq] of data.sequencers.entries()) {
-                const stage = stages[seqId]
-                if (Object.keys(seq.samples).length) {
-                    stage.$parent.parent().show()
-                    //$('#video-'+seqId).removeClass('enabled')
-                    //$('#video-'+seqId).addClass('enabled')
-                    const uSeq = seq.sequence.reduce((unique, item) => unique.includes(item) ? unique : [...unique, item], [])
-                    for (const samId of uSeq) {
-                        const d = seq.samples[samId]
-                        const $w = stage.makeWord(d).off()
-                        stage.addRenderedWord($w)
-                    }
-                    stage.sequencer.load(seq)
-                    stage.$parent.parent().find('.form-group input.volume').val(seq.volume)
-                    if (seq.interval.endsWith('hz')) {
-                        stage.$parent.parent().find('.form-group select.interval').val('custom wpm')
-                        stage.$parent.parent().find('.form-group input.customInterval').val(parseFloat(seq.interval.slice(0, -2))*60)
-                        stage.$parent.parent().find('.form-group input.customInterval').removeClass('u-none')
-                    } else {
-                        stage.$parent.parent().find('.form-group select.interval').val(seq.interval)
-                    }
-                    stage.$parent.parent().find('.form-group input.offset').val(seq.offset)
-                    stage.sequencer.setInterval(seq.interval, seq.offset)
-                    if (seq.rate) {
-                        stage.$parent.parent().find('.form-group input.rate').val(seq.rate)
-                    }
-                    if (seq.pitch) {
-                        stage.$parent.parent().find('.form-group input.pitch').val(seq.pitch)
-                    }
-                    if (seq.name) {
-                        stage.sequencer.setName(seq.name)
-                        stage.$parent.parent().find('.stage-title').text(seq.name)
-                    }
-                    if (seq.pattern) {
-                        stage.$parent.parent().find('.form-group input.pattern').val(seq.pattern)
-                        stage.sequencer.setPattern(seq.pattern)
-                    }
-                }
-            }
+            loadJSONComposition(data)
         })
         reader.readAsText(file)
     })
@@ -233,6 +256,18 @@ async function start() {
         }
     })
     // some other UI things
+    function rotateStageClass(idx, classPrefix, increment, numOptions) {
+        $.each(stages, function (key, stage) {
+            if (idx === -1 || key === idx + 1) {
+                const cl = stage.$parent.parent().attr('class').split(/\s+/).filter(c => c.startsWith(classPrefix))
+                const currSize = (cl.length) ? parseInt(cl[0].split(classPrefix)[1]) : 0
+                const nextSize = (increment) ? Math.min(numOptions - 1, currSize + 1) : Math.max(0, currSize - 1)
+                stage.$parent.parent().removeClass(`${classPrefix}${currSize}`)
+                stage.$parent.parent().addClass(`${classPrefix}${nextSize}`)
+            }
+        })
+    }
+    let editableStage = -1
     $(document).keydown(function(event) {
         if (event.altKey)
         {
@@ -247,9 +282,19 @@ async function start() {
                 const next = backgroundColors[(backgroundColors.indexOf(curr) + 1) % backgroundColors.length]
                 $('body').addClass(next)
                 $('body').removeClass(curr)
+            } else if (event.which === 50) {
+                $('body').toggleClass('show-playing')
             } else if (event.which === 80) {
                 playPause()
                 event.preventDefault()
+            } else if (event.which === 38) {
+                editableStage = Math.max(-1, editableStage - 1)
+            } else if (event.which === 40) {
+                editableStage = Math.min(stages.length - 1, editableStage + 1)
+            } else if (event.which === 173) { // minus is 189 in non-ff
+                rotateStageClass(editableStage, 's-', false, 10)
+            } else if (event.which === 61) { // eq is 187 in non-ff
+                rotateStageClass(editableStage, 's-', true, 10)
             }
         }
     })
@@ -353,4 +398,4 @@ function getSelectedElementTags(win) {
     }
 }
 
-start();
+start()

@@ -225,10 +225,10 @@ class AudioSample {
     this.player.playbackRate = this.playbackRate
     //this.player.detune = this.pitch
     if (this.start>=0 && this.duration>=0) {
-      this.player.start(startAt, this.start + .05, this.duration)
+      this.player.start("+.05", this.start + .05, this.duration)
       //this.player.start(0, this.start, this.duration)
     } else {
-      this.player.start(startAt)
+      this.player.start("+.05")
       //this.player.start()
     }
   }
@@ -356,6 +356,15 @@ class Sampler {
     this.rate = 1
     this.pitch = 0 // detune
     this.play = this.play.bind(this)
+  }
+
+  empty() {
+    for (const idx in this.samples) {
+      this.remove(idx)
+    }
+    this.volume = 10
+    this.rate = 1
+    this.pitch = 0
   }
 
   remove(idx) {
@@ -562,6 +571,17 @@ class Sequencer {
     this.set = this.set.bind(this)
     this.play = this.play.bind(this)
     this.setPattern("1111") 
+  }
+
+  empty() {
+    this.sequence = []
+    this.sequenceIdx = 0
+    this.interval = "4n"
+    this.offset = 0
+    this.crossfade = 0
+    this.setPattern("1111") 
+    this.audioSampler.empty()
+    this.videoSampler.empty()
   }
 
   setVideoPlayer(videoPlayer) {
