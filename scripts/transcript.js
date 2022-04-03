@@ -765,5 +765,5 @@ async function cheap_nlp(sentence) {
     let doc = nlp(sentence)
     //console.log(doc.nouns().list.map(a => a.text()).filter(a => a.indexOf(' ') < a.length-1))
     //return [doc.out('tags'), doc.nouns().list.filter(a => a.length>1).map(a => a.text().trim().split(' '))]
-    return [doc.out('tags'), doc.nouns().out('array').filter(a => a.length>1).map(a => a.text().trim().split(' '))]
+    return [doc.out('tags'), doc.nouns().json().filter(a => a.length>1).map(a => a.text().trim().split(' '))]
 }
